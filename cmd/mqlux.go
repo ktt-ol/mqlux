@@ -3,10 +3,8 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 	"time"
 
-	"git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 	"github.com/BurntSushi/toml"
 	"github.com/comail/colog"
 	"github.com/ktt-ol/mqlux"
@@ -15,10 +13,11 @@ import (
 func main() {
 	colog.Register()
 	colog.ParseFields(true)
-	// colog.SetMinLevel(colog.LInfo)
-	mqtt.DEBUG = log.New(os.Stdout, "[mqtt] ", log.LstdFlags)
+	colog.SetMinLevel(colog.LInfo)
+	// mqtt.DEBUG = log.New(os.Stdout, "[mqtt] ", log.LstdFlags)
 
 	configFile := flag.String("config", "mqlux.tml", "configuration")
+	flag.Parse()
 
 	config := mqlux.Config{}
 	_, err := toml.DecodeFile(*configFile, &config)
