@@ -64,27 +64,18 @@ func (i *InfluxDBClient) writePoints(pts []client.Point) error {
 
 func statusPoints(s SpaceStatus) []client.Point {
 	now := time.Now()
-	open := 0
+	open := 0.0
 	if s.Open {
-		open = 1
+		open = 1.0
 	}
-	closing := 0
 	if s.Closing {
-		closing = 1
+		open = 0.5
 	}
 	return []client.Point{
 		{
 			Measurement: "space_open",
 			Fields: map[string]interface{}{
 				"value": open,
-			},
-			Time:      now,
-			Precision: "s",
-		},
-		{
-			Measurement: "space_closing",
-			Fields: map[string]interface{}{
-				"value": closing,
 			},
 			Time:      now,
 			Precision: "s",
