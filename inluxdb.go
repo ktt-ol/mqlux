@@ -13,13 +13,6 @@ type InfluxDBClient struct {
 }
 
 func NewInfluxDBClient(conf Config) (*InfluxDBClient, error) {
-
-	// u, err := url.Parse("http://localhost:8086/")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	var err error
 	clientCfg := client.NewConfig()
 	u, err := url.Parse(conf.InfluxDB.URL)
 	if err != nil {
@@ -46,6 +39,10 @@ func (i *InfluxDBClient) WriteStatus(s SpaceStatus) error {
 
 func (i *InfluxDBClient) WriteDevices(d Devices) error {
 	return i.writePoints(devicesPoints(d))
+}
+
+func (i *InfluxDBClient) WriteSensor(s SensorConfig, v float64) error {
+	return i.writePoints(sensorPoints(s, v))
 }
 
 func (i *InfluxDBClient) writePoints(pts []client.Point) error {
@@ -77,8 +74,7 @@ func statusPoints(s SpaceStatus) []client.Point {
 			Fields: map[string]interface{}{
 				"value": open,
 			},
-			Time:      now,
-			Precision: "s",
+			Time: now,
 		},
 	}
 }
@@ -91,23 +87,35 @@ func devicesPoints(d Devices) []client.Point {
 			Fields: map[string]interface{}{
 				"value": d.Devices,
 			},
-			Time:      now,
-			Precision: "s",
+			Time: now,
 		},
 		{
 			Measurement: "devices_unknown",
 			Fields: map[string]interface{}{
 				"value": d.Unknown,
 			},
-			Time:      now,
-			Precision: "s",
+			Time: now,
 		},
-		{Measurement: "people",
+		{
+			Measurement: "people",
 			Fields: map[string]interface{}{
 				"value": d.People,
 			},
-			Time:      now,
-			Precision: "s",
+			Time: now,
+		},
+	}
+}
+
+func sensorPoints(s SensorConfig, v float64) []client.Point {
+	now := time.Now()
+	return []client.Point{
+		{
+			Measurement: s.Measurement,
+			Fields: map[string]interface{}{
+				"value": v,
+			},
+			Tags: s.Tags,
+			Time: now,
 		},
 	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 func main() {
 	colog.Register()
 	colog.ParseFields(true)
-	colog.SetMinLevel(colog.LInfo)
+	colog.SetMinLevel(colog.LDebug)
 	// mqtt.DEBUG = log.New(os.Stdout, "[mqtt] ", log.LstdFlags)
 
 	configFile := flag.String("config", "mqlux.tml", "configuration")
@@ -43,24 +44,33 @@ func main() {
 }
 
 func do(config mqlux.Config) error {
-	db, err := mqlux.NewInfluxDBClient(config)
-	if err != nil {
-		return err
-	}
 
 	c, err := mqlux.NewMQTTClient(config)
 	if err != nil {
 		return err
 	}
 
-	if err := c.Subscribe(config.Messages.Devices.Topic,
-		mqlux.NetDeviceHandler(config, db.WriteDevices)); err != nil {
-		return err
-	}
+	if config.InfluxDB.URL != "" {
+		fmt.Println(config.InfluxDB)
+		db, err := mqlux.NewInfluxDBClient(config)
+		if err != nil {
+			return err
+		}
+		if err := c.Subscribe(config.Messages.Devices.Topic,
+			mqlux.NetDeviceHandler(config, db.WriteDevices)); err != nil {
+			return err
+		}
 
-	if err := c.Subscribe(config.Messages.SpaceStatus.Topic,
-		mqlux.SpaceStatusHandler(config, db.WriteStatus)); err != nil {
-		return err
+		if err := c.Subscribe(config.Messages.SpaceStatus.Topic,
+			mqlux.SpaceStatusHandler(config, db.WriteStatus)); err != nil {
+			return err
+		}
+		for _, sensor := range config.Messages.Sensors {
+			if err := c.Subscribe(sensor.Topic,
+				mqlux.SensorHandler(config, sensor, db.WriteSensor)); err != nil {
+				return err
+			}
+		}
 	}
 
 	if config.MQTT.CSVLog != "" {

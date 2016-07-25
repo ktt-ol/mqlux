@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"log"
 	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
@@ -107,7 +109,7 @@ func NetDeviceHandler(conf Config, f func(Devices) error) mqtt.MessageHandler {
 			devices.Devices = int(v)
 		}
 
-		log.Printf("info: net-devices devices=%d unknown=%d people=%d",
+		log.Printf("debug: net-devices devices=%d unknown=%d people=%d",
 			devices.Devices, devices.Unknown, devices.People,
 		)
 
@@ -137,12 +139,56 @@ func SpaceStatusHandler(conf Config, f func(SpaceStatus) error) mqtt.MessageHand
 			status.Closing = true
 		}
 
-		log.Printf("info: net-devices open=%v closing=%v",
+		log.Printf("debug: net-devices open=%v closing=%v",
 			status.Open, status.Closing,
 		)
 
 		if err := f(status); err != nil {
 			log.Printf("error: unable to process spacestatus message: %s", err)
+		}
+	}
+	return callback
+}
+
+func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, float64) error) mqtt.MessageHandler {
+	callback := func(client *mqtt.Client, message mqtt.Message) {
+		log.Printf("debug: got status message for %s: %s", message.Topic(), message.Payload())
+
+		v, err := strconv.ParseFloat(strings.TrimSpace(string(message.Payload())), 64)
+		if err != nil {
+			log.Printf("error: unable to parse float ('%s'): %s", message.Payload(), err)
+			return
+		}
+		log.Printf("debug: sensor %v %v v=%f",
+			s.Measurement, s.Tags, v,
+		)
+
+		if err := f(s, v); err != nil {
+			log.Printf("error: unable to process spacestatus message: %s", err)
+		}
+	}
+	return callback
+}
+
+type SwitchStatus struct {
+	Pressed bool
+}
+
+func BellSwitchHandler(conf Config, f func(SwitchStatus) error) mqtt.MessageHandler {
+	callback := func(client *mqtt.Client, message mqtt.Message) {
+		log.Printf("debug: got status message for %s: %s", message.Topic(), message.Payload())
+
+		status := SwitchStatus{}
+		if string(message.Payload()) == "pressed" {
+			status.Pressed = true
+		}
+
+		log.Printf("debug: bell-switch pressed=%v",
+			status.Pressed,
+		)
+
+		if err := f(status); err != nil {
+			log.Printf("error: unable to process bell-switch message: %s", err)
 		}
 	}
 	return callback

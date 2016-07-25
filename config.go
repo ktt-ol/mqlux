@@ -6,6 +6,7 @@ type Config struct {
 	Messages struct {
 		Devices     DevicesConfig
 		SpaceStatus SpaceStatusConfig
+		Sensors     []SensorConfig `toml:"sensor"`
 	}
 	CACertFiles []string
 }
@@ -36,4 +37,10 @@ type DevicesConfig struct {
 	Unknown string
 	Devices string
 	People  string
+}
+
+type SensorConfig struct {
+	Topic       string
+	Measurement string
+	Tags        map[string]string
 }
