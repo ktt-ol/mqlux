@@ -1,0 +1,61 @@
+[mqtt]
+url = "tls://mainframe.io:8883"
+# url = "tls://spacegate.mainframe.lan:8883"
+# unique id of this client
+clientid = "mqlux-cbcadc20"
+
+# log all incoming mqtt messages to CSV
+#csvlog = "/tmp/mainframe-mqtt.log"
+
+[influxdb]
+url = "http://127.0.0.1:8086"
+database = "mainframe"
+username = "mainframe"
+password = "*****"
+
+[messages.spaceStatus]
+topic = "/access-control-system/space-state"
+spaceopen = "^(open(ed)?|closing)$"
+spaceclosing = "^closing$"
+
+[messages.devices]
+topic = "/net/devices"
+devices = "deviceCount"
+unknown = "unknownDevicesCount"
+people = "peopleCount"
+
+## For float type sensors:
+# [[messages.sensor]]
+## The MQTT topic
+# topic = "/test/stromVorne/cum"
+## The measurement name for influxdb.
+## Similar sensors should all share the same `measurement` name.
+## measurement = "power"
+# [messages.sensor.tags]
+## One or more tags (key=value) to distinguish between different sensors.
+# room = "vorne"
+
+[[messages.sensor]]
+topic = "/test/stromVorne/cum"
+measurement = "power"
+[messages.sensor.tags]
+room = "vorne"
+
+[[messages.sensor]]
+topic = "/test/stromVorne/power"
+measurement = "current_power"
+[messages.sensor.tags]
+room = "vorne"
+
+[[messages.sensor]]
+topic = "/test/stromHinten/cum"
+measurement = "power"
+[messages.sensor.tags]
+room = "hinten"
+
+[[messages.sensor]]
+topic = "/test/stromHinten/power"
+measurement = "current_power"
+[messages.sensor.tags]
+room = "hinten"
+
