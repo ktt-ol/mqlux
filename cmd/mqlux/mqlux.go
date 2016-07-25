@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
@@ -14,11 +13,17 @@ import (
 func main() {
 	colog.Register()
 	colog.ParseFields(true)
-	colog.SetMinLevel(colog.LDebug)
-	// mqtt.DEBUG = log.New(os.Stdout, "[mqtt] ", log.LstdFlags)
+	colog.SetMinLevel(colog.LInfo)
 
 	configFile := flag.String("config", "mqlux.tml", "configuration")
+	debug := flag.Bool("debug", false, "print debug messages")
 	flag.Parse()
+
+	if *debug {
+		colog.SetMinLevel(colog.LDebug)
+		// mqtt debug is very verbose
+		// mqtt.DEBUG = log.New(os.Stdout, "[mqtt] ", log.LstdFlags)
+	}
 
 	config := mqlux.Config{}
 	_, err := toml.DecodeFile(*configFile, &config)
@@ -51,7 +56,6 @@ func do(config mqlux.Config) error {
 	}
 
 	if config.InfluxDB.URL != "" {
-		fmt.Println(config.InfluxDB)
 		db, err := mqlux.NewInfluxDBClient(config)
 		if err != nil {
 			return err
