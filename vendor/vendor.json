@@ -1,0 +1,85 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "fTVPhPLsi9VCVRSHVapugwz2Lps=",
+			"path": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git",
+			"revision": "617c801af238c3af2d9e72c5d4a0f02edad03ce5",
+			"revisionTime": "2016-02-08T11:21:59Z"
+		},
+		{
+			"checksumSHA1": "0GLCFOXSJjCjvlsurRP/Pt2WvdE=",
+			"path": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git/packets",
+			"revision": "617c801af238c3af2d9e72c5d4a0f02edad03ce5",
+			"revisionTime": "2016-02-08T11:21:59Z"
+		},
+		{
+			"checksumSHA1": "QfNyP58Wby5nuvgr37f7vxct75A=",
+			"path": "github.com/BurntSushi/toml",
+			"revision": "056c9bc7be7190eaa7715723883caffa5f8fa3e4",
+			"revisionTime": "2015-05-01T10:40:42Z"
+		},
+		{
+			"checksumSHA1": "+U+s6CzixLU/wKizY4vRCkYJ1WM=",
+			"path": "github.com/comail/colog",
+			"revision": "fba8e7b1f46c3607f09760ce3880066e7ff57c5a",
+			"revisionTime": "2016-04-16T08:50:26Z"
+		},
+		{
+			"checksumSHA1": "ae6ZYaLAGWS6Z9MFWNP9qsqD5rY=",
+			"path": "github.com/eclipse/paho.mqtt.golang",
+			"revision": "44eec149d4433449add74781ffc86cc60d3f1598",
+			"revisionTime": "2016-06-30T14:40:56Z"
+		},
+		{
+			"checksumSHA1": "4S2JvfaLl2hOzrRJ0akG3zVPSSk=",
+			"path": "github.com/eclipse/paho.mqtt.golang/packets",
+			"revision": "44eec149d4433449add74781ffc86cc60d3f1598",
+			"revisionTime": "2016-06-30T14:40:56Z"
+		},
+		{
+			"checksumSHA1": "z/2xsrJamaC3QABBwWSJZWmK2TE=",
+			"path": "github.com/influxdata/influxdb/client/v2",
+			"revision": "1bfc83204600af5485436a155413886a8eea68e9",
+			"revisionTime": "2016-05-13T21:55:49Z"
+		},
+		{
+			"checksumSHA1": "ryu65/DPOy+5Ea2Qke5VDBA62VY=",
+			"path": "github.com/influxdata/influxdb/models",
+			"revision": "1bfc83204600af5485436a155413886a8eea68e9",
+			"revisionTime": "2016-05-13T21:55:49Z"
+		},
+		{
+			"checksumSHA1": "2w3Gla45aneQ6D1qmTsUWsOPYDI=",
+			"path": "github.com/influxdata/influxdb/pkg/escape",
+			"revision": "1bfc83204600af5485436a155413886a8eea68e9",
+			"revisionTime": "2016-05-13T21:55:49Z"
+		},
+		{
+			"checksumSHA1": "/sfsdZiTknWawXt95U5vd67jpWg=",
+			"path": "github.com/influxdb/influxdb/client",
+			"revision": "15330ec015fd7e7bec6ae6496c93e7db50a18d48",
+			"revisionTime": "2016-03-03T22:37:12Z"
+		},
+		{
+			"checksumSHA1": "aMuXtYebr91FphmgzTyo0/BWa5Y=",
+			"path": "github.com/influxdb/influxdb/models",
+			"revision": "15330ec015fd7e7bec6ae6496c93e7db50a18d48",
+			"revisionTime": "2016-03-03T22:37:12Z"
+		},
+		{
+			"checksumSHA1": "51tLsv+HzC3X4Xayc/t8fLqeT1k=",
+			"path": "github.com/influxdb/influxdb/pkg/escape",
+			"revision": "15330ec015fd7e7bec6ae6496c93e7db50a18d48",
+			"revisionTime": "2016-03-03T22:37:12Z"
+		},
+		{
+			"checksumSHA1": "likOl7O0BJntqagR050kkOBuY4o=",
+			"path": "golang.org/x/net/websocket",
+			"revision": "6a513affb38dc9788b449d59ffed099b8de18fa0",
+			"revisionTime": "2016-07-26T08:19:14Z"
+		}
+	],
+	"rootPath": "github.com/ktt-ol/mqlux"
+}
