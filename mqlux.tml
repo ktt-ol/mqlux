@@ -1,11 +1,13 @@
 [mqtt]
 url = "tls://mainframe.io:8883"
+#url = "tcp://test.mosquitto.org:1883"
 # url = "tls://spacegate.mainframe.lan:8883"
 # unique id of this client
 clientid = "mqlux-cbcadc20"
 
 # log all incoming mqtt messages to CSV
-#csvlog = "/tmp/mainframe-mqtt.log"
+#csvlog = "-"
+#csvlog = /tmp/mainframe-mqtt.log"
 
 [influxdb]
 url = "http://127.0.0.1:8086"

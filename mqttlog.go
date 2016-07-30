@@ -2,11 +2,11 @@ package mqlux
 
 import (
 	"encoding/csv"
+	"io"
 	"log"
-	"os"
 	"time"
 
-	"git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
+	"github.com/eclipse/paho.mqtt.golang"
 )
 
 type record struct {
@@ -15,14 +15,9 @@ type record struct {
 	payload []byte
 }
 
-func NewMQTTLogger(file string) (*MQTTLogger, error) {
-	f, err := os.OpenFile(file, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
-	if err != nil {
-		return nil, err
-	}
+func NewMQTTLogger(out io.Writer) (*MQTTLogger, error) {
 	logger := &MQTTLogger{
-		file:      f,
-		csvWriter: csv.NewWriter(f),
+		csvWriter: csv.NewWriter(out),
 		records:   make(chan record, 64),
 	}
 	go logger.run()
@@ -30,12 +25,11 @@ func NewMQTTLogger(file string) (*MQTTLogger, error) {
 }
 
 type MQTTLogger struct {
-	file      *os.File
 	csvWriter *csv.Writer
 	records   chan record
 }
 
-func (w *MQTTLogger) Log(client *mqtt.Client, message mqtt.Message) {
+func (w *MQTTLogger) Log(client mqtt.Client, message mqtt.Message) {
 	w.records <- record{
 		time:    time.Now(),
 		topic:   message.Topic(),
@@ -48,7 +42,6 @@ func (w *MQTTLogger) Stop() {
 }
 
 func (w *MQTTLogger) run() {
-	defer w.file.Close()
 	for r := range w.records {
 		err := w.csvWriter.Write([]string{
 			r.time.Format(time.RFC3339),

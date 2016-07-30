@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 func defaultCertPool() *x509.CertPool {
@@ -25,12 +25,7 @@ func defaultCertPool() *x509.CertPool {
 	return certs
 }
 
-type MQTTClient struct {
-	client *mqtt.Client
-	openc  chan struct{}
-}
-
-func NewMQTTClient(conf Config) (*MQTTClient, error) {
+func NewMQTTClient(conf Config, onConnect mqtt.OnConnectHandler) (mqtt.Client, error) {
 	opts := mqtt.NewClientOptions()
 
 	opts.AddBroker(conf.MQTT.URL)
@@ -52,35 +47,25 @@ func NewMQTTClient(conf Config) (*MQTTClient, error) {
 
 	opts.SetTLSConfig(tlsConf)
 
-	opts.SetAutoReconnect(false)
-	opts.SetKeepAlive(5 * time.Second)
-	// opts.SetMaxReconnectInterval(10 * time.Second)
+	opts.SetAutoReconnect(true)
 
-	// close channel to notify disconnect
-	openc := make(chan struct{})
-	opts.SetConnectionLostHandler(func(c *mqtt.Client, err error) {
-		close(openc)
-	})
+	opts.SetKeepAlive(10 * time.Second)
+	opts.SetMaxReconnectInterval(5 * time.Minute)
+
+	opts.SetOnConnectHandler(onConnect)
 
 	mc := mqtt.NewClient(opts)
 	if tok := mc.Connect(); tok.WaitTimeout(5*time.Second) && tok.Error() != nil {
 		return nil, tok.Error()
 	}
 
-	return &MQTTClient{
-		client: mc,
-		openc:  openc,
-	}, nil
+	return mc, nil
 }
 
-func (m *MQTTClient) WaitDisconnect() {
-	<-m.openc // block till channel gets closed
-}
-
-func (m *MQTTClient) Subscribe(topic string, cb mqtt.MessageHandler) error {
+func Subscribe(client mqtt.Client, topic string, cb mqtt.MessageHandler) error {
 	qos := 0
-	tok := m.client.Subscribe(topic, byte(qos), cb)
-	tok.WaitTimeout(2 * time.Second)
+	tok := client.Subscribe(topic, byte(qos), cb)
+	tok.WaitTimeout(5 * time.Second)
 	return tok.Error()
 }
 
@@ -91,7 +76,7 @@ type Devices struct {
 }
 
 func NetDeviceHandler(conf Config, f func(Devices) error) mqtt.MessageHandler {
-	callback := func(client *mqtt.Client, message mqtt.Message) {
+	callback := func(client mqtt.Client, message mqtt.Message) {
 		log.Printf("debug: got net message for %s: %s", message.Topic(), message.Payload())
 		var msg map[string]interface{}
 		if err := json.Unmarshal(message.Payload(), &msg); err != nil {
@@ -128,7 +113,7 @@ type SpaceStatus struct {
 func SpaceStatusHandler(conf Config, f func(SpaceStatus) error) mqtt.MessageHandler {
 	closing := regexp.MustCompile(conf.Messages.SpaceStatus.SpaceClosing)
 	open := regexp.MustCompile(conf.Messages.SpaceStatus.SpaceOpen)
-	callback := func(client *mqtt.Client, message mqtt.Message) {
+	callback := func(client mqtt.Client, message mqtt.Message) {
 		log.Printf("debug: got status message for %s: %s", message.Topic(), message.Payload())
 
 		status := SpaceStatus{}
@@ -151,7 +136,7 @@ func SpaceStatusHandler(conf Config, f func(SpaceStatus) error) mqtt.MessageHand
 }
 
 func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, float64) error) mqtt.MessageHandler {
-	callback := func(client *mqtt.Client, message mqtt.Message) {
+	callback := func(client mqtt.Client, message mqtt.Message) {
 		log.Printf("debug: got status message for %s: %s", message.Topic(), message.Payload())
 
 		v, err := strconv.ParseFloat(strings.TrimSpace(string(message.Payload())), 64)
@@ -175,11 +160,11 @@ type SwitchStatus struct {
 }
 
 func BellSwitchHandler(conf Config, f func(SwitchStatus) error) mqtt.MessageHandler {
-	callback := func(client *mqtt.Client, message mqtt.Message) {
+	callback := func(client mqtt.Client, message mqtt.Message) {
 		log.Printf("debug: got status message for %s: %s", message.Topic(), message.Payload())
 
 		status := SwitchStatus{}
-		if string(message.Payload()) == "pressed" {
+		if string(message.Payload()) == "1" {
 			status.Pressed = true
 		}
 

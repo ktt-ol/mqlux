@@ -2,11 +2,14 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/comail/colog"
+	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/ktt-ol/mqlux"
 )
 
@@ -31,62 +34,71 @@ func main() {
 		log.Fatal(err)
 	}
 
-	wait := 250 * time.Millisecond
-	maxWait := 60 * time.Second
-	for {
-		// 2015-10-13: auto reconnect from mqtt is broken (keep alive keeps err-ing)
-		// reconnect here
-		if err := do(config); err != nil {
-			log.Println("error: ", err)
-			time.Sleep(wait)
-			if wait < maxWait {
-				wait *= 2
-			}
-		} else {
-			wait = 250 * time.Millisecond
-		}
-	}
-}
-
-func do(config mqlux.Config) error {
-
-	c, err := mqlux.NewMQTTClient(config)
-	if err != nil {
-		return err
-	}
+	var onConnectHandler []mqtt.OnConnectHandler
 
 	if config.InfluxDB.URL != "" {
 		db, err := mqlux.NewInfluxDBClient(config)
 		if err != nil {
-			return err
-		}
-		if err := c.Subscribe(config.Messages.Devices.Topic,
-			mqlux.NetDeviceHandler(config, db.WriteDevices)); err != nil {
-			return err
+			log.Fatal(err)
 		}
 
-		if err := c.Subscribe(config.Messages.SpaceStatus.Topic,
-			mqlux.SpaceStatusHandler(config, db.WriteStatus)); err != nil {
-			return err
-		}
-		for _, sensor := range config.Messages.Sensors {
-			if err := c.Subscribe(sensor.Topic,
-				mqlux.SensorHandler(config, sensor, db.WriteSensor)); err != nil {
-				return err
+		onConnectHandler = append(onConnectHandler, func(c mqtt.Client) {
+			if err := mqlux.Subscribe(c, config.Messages.Devices.Topic,
+				mqlux.NetDeviceHandler(config, db.WriteDevices)); err != nil {
+				log.Fatal(err)
 			}
-		}
+
+			if err := mqlux.Subscribe(c, config.Messages.SpaceStatus.Topic,
+				mqlux.SpaceStatusHandler(config, db.WriteStatus)); err != nil {
+				log.Fatal(err)
+			}
+			for _, sensor := range config.Messages.Sensors {
+				if err := mqlux.Subscribe(c, sensor.Topic,
+					mqlux.SensorHandler(config, sensor, db.WriteSensor)); err != nil {
+					log.Fatal(err)
+				}
+			}
+		})
 	}
 
 	if config.MQTT.CSVLog != "" {
-		logger, err := mqlux.NewMQTTLogger(config.MQTT.CSVLog)
+		var out io.Writer
+		if config.MQTT.CSVLog == "-" {
+			out = os.Stdout
+		} else {
+			f, err := os.OpenFile(config.MQTT.CSVLog, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
+			out = f
+		}
+		logger, err := mqlux.NewMQTTLogger(out)
 		if err != nil {
-			return err
+			log.Fatal(err)
 		}
-		if err := c.Subscribe("/#", logger.Log); err != nil {
-			return err
-		}
+
+		onConnectHandler = append(onConnectHandler, func(c mqtt.Client) {
+			if err := mqlux.Subscribe(c, "/#", logger.Log); err != nil {
+				log.Fatal(err)
+			}
+		})
 	}
 
-	c.WaitDisconnect()
-	return nil
+	_, err = mqlux.NewMQTTClient(config, func(c mqtt.Client) {
+		log.Println("debug: connect handler called")
+		for i := range onConnectHandler {
+			onConnectHandler[i](c)
+		}
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	t := time.NewTicker(60 * time.Second)
+	for range t.C {
+
+	}
+
 }
