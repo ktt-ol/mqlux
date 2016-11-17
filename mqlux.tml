@@ -8,6 +8,7 @@ clientid = "mqlux-cbcadc20"
 # log all incoming mqtt messages to CSV
 #csvlog = "-"
 #csvlog = /tmp/mainframe-mqtt.log"
+keepalive = "2m"
 
 [influxdb]
 url = "http://127.0.0.1:8086"

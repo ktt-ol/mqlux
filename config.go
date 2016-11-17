@@ -12,11 +12,12 @@ type Config struct {
 }
 
 type MQTTConfig struct {
-	URL      string
-	Username string
-	Password string
-	ClientID string
-	CSVLog   string
+	URL       string
+	Username  string
+	Password  string
+	ClientID  string
+	CSVLog    string
+	KeepAlive string
 }
 
 type InfluxDBConfig struct {

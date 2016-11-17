@@ -61,6 +61,22 @@ func main() {
 		})
 	}
 
+	var keepAliveC chan struct{}
+	var keepAlive time.Duration
+	var keepAliveHandler mqtt.MessageHandler
+	if config.MQTT.KeepAlive != "" {
+		var err error
+		keepAlive, err = time.ParseDuration(config.MQTT.KeepAlive)
+		if err != nil {
+			log.Fatal("invalid keepalive duration", err)
+		}
+		keepAliveC = make(chan struct{}, 1)
+		keepAliveHandler = func(client mqtt.Client, message mqtt.Message) {
+			keepAliveC <- struct{}{}
+		}
+	}
+
+	var logHandler mqtt.MessageHandler
 	if config.MQTT.CSVLog != "" {
 		var out io.Writer
 		if config.MQTT.CSVLog == "-" {
@@ -77,9 +93,22 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		logHandler = logger.Log
+	}
 
+	// mqtt.Subscribe only supports one callback for each topic
+	// create allHandler and dispatch to log and keepalive handlers
+	if logHandler != nil || keepAliveHandler != nil {
+		allHandler := func(client mqtt.Client, message mqtt.Message) {
+			if logHandler != nil {
+				logHandler(client, message)
+			}
+			if keepAliveHandler != nil {
+				keepAliveHandler(client, message)
+			}
+		}
 		onConnectHandler = append(onConnectHandler, func(c mqtt.Client) {
-			if err := mqlux.Subscribe(c, "/#", logger.Log); err != nil {
+			if err := mqlux.Subscribe(c, "/#", allHandler); err != nil {
 				log.Fatal(err)
 			}
 		})
@@ -96,9 +125,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	t := time.NewTicker(60 * time.Second)
-	for range t.C {
-
+	t := time.NewTicker(10 * time.Second)
+	lastKeepAlive := time.Now()
+	for {
+		select {
+		case <-t.C:
+			if keepAlive != 0 && time.Since(lastKeepAlive) > keepAlive {
+				os.Exit(42)
+			}
+		case <-keepAliveC:
+			lastKeepAlive = time.Now()
+		}
 	}
-
 }
