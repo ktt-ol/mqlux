@@ -119,6 +119,8 @@ func (r *router) deleteRoute(topic string) {
 // setDefaultHandler assigns a default callback that will be called if no matching Route
 // is found for an incoming Publish.
 func (r *router) setDefaultHandler(handler MessageHandler) {
+	r.Lock()
+	defer r.Unlock()
 	r.defaultHandler = handler
 }
 
@@ -133,27 +135,27 @@ func (r *router) matchAndDispatch(messages <-chan *packets.PublishPacket, order 
 			case message := <-messages:
 				sent := false
 				r.RLock()
+				handlers := []MessageHandler{}
 				for e := r.routes.Front(); e != nil; e = e.Next() {
 					if e.Value.(*route).match(message.TopicName) {
 						if order {
-							r.RUnlock()
-							e.Value.(*route).callback(client, messageFromPublish(message))
-							r.RLock()
+							handlers = append(handlers, e.Value.(*route).callback)
 						} else {
 							go e.Value.(*route).callback(client, messageFromPublish(message))
 						}
 						sent = true
 					}
 				}
-				r.RUnlock()
 				if !sent && r.defaultHandler != nil {
 					if order {
-						r.RLock()
-						r.defaultHandler(client, messageFromPublish(message))
-						r.RUnlock()
+						handlers = append(handlers, r.defaultHandler)
 					} else {
 						go r.defaultHandler(client, messageFromPublish(message))
 					}
+				}
+				r.RUnlock()
+				for _, handler := range handlers {
+					handler(client, messageFromPublish(message))
 				}
 			case <-r.stop:
 				return

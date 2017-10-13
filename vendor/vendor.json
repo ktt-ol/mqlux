@@ -3,18 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "fTVPhPLsi9VCVRSHVapugwz2Lps=",
-			"path": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git",
-			"revision": "617c801af238c3af2d9e72c5d4a0f02edad03ce5",
-			"revisionTime": "2016-02-08T11:21:59Z"
-		},
-		{
-			"checksumSHA1": "0GLCFOXSJjCjvlsurRP/Pt2WvdE=",
-			"path": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git/packets",
-			"revision": "617c801af238c3af2d9e72c5d4a0f02edad03ce5",
-			"revisionTime": "2016-02-08T11:21:59Z"
-		},
-		{
 			"checksumSHA1": "QfNyP58Wby5nuvgr37f7vxct75A=",
 			"path": "github.com/BurntSushi/toml",
 			"revision": "056c9bc7be7190eaa7715723883caffa5f8fa3e4",
@@ -27,16 +15,16 @@
 			"revisionTime": "2016-04-16T08:50:26Z"
 		},
 		{
-			"checksumSHA1": "PPyNjcW5yfrfXvARE74fh9JBSpo=",
+			"checksumSHA1": "9SMXUZjn5vV8cpAlpokIDKZe2MA=",
 			"path": "github.com/eclipse/paho.mqtt.golang",
-			"revision": "13afcbe8e41508479762a90e9242577210c2ca8d",
-			"revisionTime": "2016-10-12T12:34:52Z"
+			"revision": "65f43bda5f7edbbf6b7533d3a5a13b2c67cf3545",
+			"revisionTime": "2017-09-08T15:56:42Z"
 		},
 		{
-			"checksumSHA1": "wPreCwXsA/oU2R+lkOGpR6skdA0=",
+			"checksumSHA1": "ITCnG3uKUnqNXrnnulKokjQKfN4=",
 			"path": "github.com/eclipse/paho.mqtt.golang/packets",
-			"revision": "13afcbe8e41508479762a90e9242577210c2ca8d",
-			"revisionTime": "2016-10-12T12:34:52Z"
+			"revision": "65f43bda5f7edbbf6b7533d3a5a13b2c67cf3545",
+			"revisionTime": "2017-09-08T15:56:42Z"
 		},
 		{
 			"checksumSHA1": "z/2xsrJamaC3QABBwWSJZWmK2TE=",
