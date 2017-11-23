@@ -149,7 +149,7 @@ func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, float64) er
 		)
 		if f != nil {
 			if err := f(s, v); err != nil {
-				log.Printf("error: unable to process spacestatus message: %s", err)
+				log.Printf("error: unable to process sensor message: %s", err)
 			}
 		}
 	}
