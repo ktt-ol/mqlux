@@ -34,14 +34,23 @@ func NewInfluxDBClient(conf Config) (*InfluxDBClient, error) {
 }
 
 func (i *InfluxDBClient) WriteStatus(s SpaceStatus) error {
+	if i == nil {
+		return nil
+	}
 	return i.writePoints(statusPoints(s))
 }
 
 func (i *InfluxDBClient) WriteDevices(d Devices) error {
+	if i == nil {
+		return nil
+	}
 	return i.writePoints(devicesPoints(d))
 }
 
 func (i *InfluxDBClient) WriteSensor(s SensorConfig, v float64) error {
+	if i == nil {
+		return nil
+	}
 	return i.writePoints(sensorPoints(s, v))
 }
 

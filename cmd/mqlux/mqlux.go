@@ -36,30 +36,35 @@ func main() {
 
 	var onConnectHandler []mqtt.OnConnectHandler
 
+	var db *mqlux.InfluxDBClient
 	if config.InfluxDB.URL != "" {
-		db, err := mqlux.NewInfluxDBClient(config)
+		db, err = mqlux.NewInfluxDBClient(config)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		onConnectHandler = append(onConnectHandler, func(c mqtt.Client) {
-			if err := mqlux.Subscribe(c, config.Messages.Devices.Topic,
-				mqlux.NetDeviceHandler(config, db.WriteDevices)); err != nil {
-				log.Fatal(err)
-			}
-
-			if err := mqlux.Subscribe(c, config.Messages.SpaceStatus.Topic,
-				mqlux.SpaceStatusHandler(config, db.WriteStatus)); err != nil {
-				log.Fatal(err)
-			}
-			for _, sensor := range config.Messages.Sensors {
-				if err := mqlux.Subscribe(c, sensor.Topic,
-					mqlux.SensorHandler(config, sensor, db.WriteSensor)); err != nil {
-					log.Fatal(err)
-				}
-			}
-		})
 	}
+
+	onConnectHandler = append(onConnectHandler, func(c mqtt.Client) {
+		log.Print("debug: on connect")
+
+		if err := mqlux.Subscribe(c, config.Messages.Devices.Topic,
+			mqlux.NetDeviceHandler(config, db.WriteDevices)); err != nil {
+			log.Fatal(err)
+		}
+
+		if err := mqlux.Subscribe(c, config.Messages.SpaceStatus.Topic,
+			mqlux.SpaceStatusHandler(config, db.WriteStatus)); err != nil {
+			log.Fatal(err)
+		}
+		for _, sensor := range config.Messages.Sensors {
+			if err := mqlux.Subscribe(c, sensor.Topic,
+				mqlux.SensorHandler(config, sensor, db.WriteSensor)); err != nil {
+				log.Fatal(err)
+			} else {
+				log.Print("debug: subscribed to", sensor.Topic)
+			}
+		}
+	})
 
 	var keepAliveC chan struct{}
 	var keepAlive time.Duration
