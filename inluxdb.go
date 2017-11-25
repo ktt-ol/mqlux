@@ -47,11 +47,11 @@ func (i *InfluxDBClient) WriteDevices(d Devices) error {
 	return i.writePoints(devicesPoints(d))
 }
 
-func (i *InfluxDBClient) WriteSensor(s SensorConfig, v float64) error {
+func (i *InfluxDBClient) WriteSensor(s SensorConfig, tags map[string]string, v float64) error {
 	if i == nil {
 		return nil
 	}
-	return i.writePoints(sensorPoints(s, v))
+	return i.writePoints(sensorPoints(s, tags, v))
 }
 
 func (i *InfluxDBClient) writePoints(pts []client.Point) error {
@@ -115,7 +115,7 @@ func devicesPoints(d Devices) []client.Point {
 	}
 }
 
-func sensorPoints(s SensorConfig, v float64) []client.Point {
+func sensorPoints(s SensorConfig, tags map[string]string, v float64) []client.Point {
 	now := time.Now()
 	return []client.Point{
 		{
@@ -123,7 +123,7 @@ func sensorPoints(s SensorConfig, v float64) []client.Point {
 			Fields: map[string]interface{}{
 				"value": v,
 			},
-			Tags: s.Tags,
+			Tags: tags,
 			Time: now,
 		},
 	}

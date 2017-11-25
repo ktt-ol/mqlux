@@ -135,20 +135,36 @@ func SpaceStatusHandler(conf Config, f func(SpaceStatus) error) mqtt.MessageHand
 	return callback
 }
 
-func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, float64) error) mqtt.MessageHandler {
+func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, map[string]string, float64) error) mqtt.MessageHandler {
 	callback := func(client mqtt.Client, message mqtt.Message) {
-		log.Printf("debug: got status message for %s: %s", message.Topic(), message.Payload())
+		log.Printf("debug: got status message for %s: %s (%v)", message.Topic(), message.Payload(), s)
+		var tags map[string]string
+		if s.RegexpTopic != nil {
+			tags = s.RegexpTopic.Match(message.Topic())
+			if tags == nil {
+				return
+			}
+		}
 
 		v, err := strconv.ParseFloat(strings.TrimSpace(string(message.Payload())), 64)
 		if err != nil {
 			log.Printf("error: unable to parse float ('%s'): %s", message.Payload(), err)
 			return
 		}
+
+		if tags != nil {
+			// append static Tags to regexp tags
+			for k, v := range s.Tags {
+				tags[k] = v
+			}
+		} else {
+			tags = s.Tags
+		}
 		log.Printf("debug: sensor %v %v v=%f",
-			s.Measurement, s.Tags, v,
+			s.Measurement, tags, v,
 		)
 		if f != nil {
-			if err := f(s, v); err != nil {
+			if err := f(s, tags, v); err != nil {
 				log.Printf("error: unable to process sensor message: %s", err)
 			}
 		}

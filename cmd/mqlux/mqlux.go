@@ -60,7 +60,18 @@ func main() {
 				log.Fatal(err)
 			}
 		}
+
 		for _, sensor := range config.Messages.Sensors {
+			rt, err := mqlux.NewRegexpTopic(sensor.Topic)
+			if err == nil {
+				sensor.RegexpTopic = rt
+				sensor.Topic = rt.SubscribeTopic
+			} else if err == mqlux.NoRegexpTopic {
+				// just use regular sensor.Topic
+			} else {
+				log.Fatal(err)
+			}
+			log.Print("debug: subscribing for sensor", sensor)
 			if err := mqlux.Subscribe(c, sensor.Topic,
 				mqlux.SensorHandler(config, sensor, db.WriteSensor)); err != nil {
 				log.Fatal(err)
