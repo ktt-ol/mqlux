@@ -47,14 +47,18 @@ func main() {
 	onConnectHandler = append(onConnectHandler, func(c mqtt.Client) {
 		log.Print("debug: on connect")
 
-		if err := mqlux.Subscribe(c, config.Messages.Devices.Topic,
-			mqlux.NetDeviceHandler(config, db.WriteDevices)); err != nil {
-			log.Fatal(err)
+		if config.Messages.Devices.Topic != "" {
+			if err := mqlux.Subscribe(c, config.Messages.Devices.Topic,
+				mqlux.NetDeviceHandler(config, db.WriteDevices)); err != nil {
+				log.Fatal(err)
+			}
 		}
 
-		if err := mqlux.Subscribe(c, config.Messages.SpaceStatus.Topic,
-			mqlux.SpaceStatusHandler(config, db.WriteStatus)); err != nil {
-			log.Fatal(err)
+		if config.Messages.SpaceStatus.Topic != "" {
+			if err := mqlux.Subscribe(c, config.Messages.SpaceStatus.Topic,
+				mqlux.SpaceStatusHandler(config, db.WriteStatus)); err != nil {
+				log.Fatal(err)
+			}
 		}
 		for _, sensor := range config.Messages.Sensors {
 			if err := mqlux.Subscribe(c, sensor.Topic,
