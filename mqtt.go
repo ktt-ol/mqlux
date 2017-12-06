@@ -3,11 +3,7 @@ package mqlux
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"log"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -42,7 +38,8 @@ func NewMQTTClient(conf Config, onConnect mqtt.OnConnectHandler) (mqtt.Client, e
 	certs := defaultCertPool()
 
 	tlsConf := &tls.Config{
-		RootCAs: certs,
+		InsecureSkipVerify: true,
+		RootCAs:            certs,
 	}
 
 	opts.SetTLSConfig(tlsConf)
@@ -62,138 +59,96 @@ func NewMQTTClient(conf Config, onConnect mqtt.OnConnectHandler) (mqtt.Client, e
 	return mc, nil
 }
 
-func Subscribe(client mqtt.Client, topic string, cb mqtt.MessageHandler) error {
-	qos := 0
-	tok := client.Subscribe(topic, byte(qos), cb)
-	tok.WaitTimeout(5 * time.Second)
-	return tok.Error()
+// func Subscribe(client mqtt.Client, topic string, cb mqtt.MessageHandler) error {
+// 	qos := 0
+// 	tok := client.Subscribe(topic, byte(qos), cb)
+// 	tok.WaitTimeout(5 * time.Second)
+// 	return tok.Error()
+// }
+
+// func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, map[string]string, float64) error) mqtt.MessageHandler {
+// 	callback := func(client mqtt.Client, message mqtt.Message) {
+// 		log.Printf("debug: got status message for %s: %s (%v)", message.Topic(), message.Payload(), s)
+// 		var tags map[string]string
+// 		if s.RegexpTopic != nil {
+// 			tags = s.RegexpTopic.Tags(message.Topic())
+// 			if tags == nil {
+// 				return
+// 			}
+// 		}
+//
+// 		v, err := strconv.ParseFloat(strings.TrimSpace(string(message.Payload())), 64)
+// 		if err != nil {
+// 			log.Printf("error: unable to parse float ('%s'): %s", message.Payload(), err)
+// 			return
+// 		}
+//
+// 		if tags != nil {
+// 			// append static Tags to regexp tags
+// 			for k, v := range s.Tags {
+// 				tags[k] = v
+// 			}
+// 		} else {
+// 			tags = s.Tags
+// 		}
+// 		log.Printf("debug: sensor %v %v v=%f",
+// 			s.Measurement, tags, v,
+// 		)
+// 		if f != nil {
+// 			if err := f(s, tags, v); err != nil {
+// 				log.Printf("error: unable to process sensor message: %s", err)
+// 			}
+// 		}
+// 	}
+// }
+//
+type Handler interface {
+	// Topic returns the topic this handler should be subscribed to.
+	// The topic can contain wildcards. Match will check if
+	// a final topic should actualy be handled.
+	Topic() string
+	// Match returns whether this handler handles a specific topic.
+	Match(topic string) bool
+	// Receive takes and processes an incoming mqtt.Message.
+	Receive(client mqtt.Client, message mqtt.Message)
 }
 
-type Devices struct {
-	People  int
-	Unknown int
-	Devices int
-}
+type Parser func(topic string, payload []byte, measurement string, tags map[string]string) ([]Record, error)
 
-func NetDeviceHandler(conf Config, f func(Devices) error) mqtt.MessageHandler {
-	callback := func(client mqtt.Client, message mqtt.Message) {
-		log.Printf("debug: got net message for %s: %s", message.Topic(), message.Payload())
-		var msg map[string]interface{}
-		if err := json.Unmarshal(message.Payload(), &msg); err != nil {
-			log.Printf("error: unable to unmarshal json: %s `%s`", err, message.Payload())
-			return
-		}
-		devices := Devices{}
-		if v, ok := msg[conf.Messages.Devices.People].(float64); ok {
-			devices.People = int(v)
-		}
-		if v, ok := msg[conf.Messages.Devices.Unknown].(float64); ok {
-			devices.Unknown = int(v)
-		}
-		if v, ok := msg[conf.Messages.Devices.Devices].(float64); ok {
-			devices.Devices = int(v)
-		}
-
-		log.Printf("debug: net-devices devices=%d unknown=%d people=%d",
-			devices.Devices, devices.Unknown, devices.People,
-		)
-
-		if err := f(devices); err != nil {
-			log.Printf("error: unable to process devices message: %s", err)
-		}
+func Subscribe(client mqtt.Client, handler []Handler) error {
+	// group handler by topic
+	topicHandler := make(map[string][]Handler)
+	for _, h := range handler {
+		topic := h.Topic()
+		topicHandler[topic] = append(topicHandler[topic], h)
 	}
-	return callback
-}
 
-type SpaceStatus struct {
-	Open    bool
-	Closing bool
-}
-
-func SpaceStatusHandler(conf Config, f func(SpaceStatus) error) mqtt.MessageHandler {
-	closing := regexp.MustCompile(conf.Messages.SpaceStatus.SpaceClosing)
-	open := regexp.MustCompile(conf.Messages.SpaceStatus.SpaceOpen)
-	callback := func(client mqtt.Client, message mqtt.Message) {
-		log.Printf("debug: got status message for %s: %s", message.Topic(), message.Payload())
-
-		status := SpaceStatus{}
-		if open.Match(message.Payload()) {
-			status.Open = true
-		}
-		if closing.Match(message.Payload()) {
-			status.Closing = true
-		}
-
-		log.Printf("debug: net-devices open=%v closing=%v",
-			status.Open, status.Closing,
-		)
-
-		if err := f(status); err != nil {
-			log.Printf("error: unable to process spacestatus message: %s", err)
-		}
-	}
-	return callback
-}
-
-func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, map[string]string, float64) error) mqtt.MessageHandler {
-	callback := func(client mqtt.Client, message mqtt.Message) {
-		log.Printf("debug: got status message for %s: %s (%v)", message.Topic(), message.Payload(), s)
-		var tags map[string]string
-		if s.RegexpTopic != nil {
-			tags = s.RegexpTopic.Match(message.Topic())
-			if tags == nil {
-				return
-			}
-		}
-
-		v, err := strconv.ParseFloat(strings.TrimSpace(string(message.Payload())), 64)
-		if err != nil {
-			log.Printf("error: unable to parse float ('%s'): %s", message.Payload(), err)
-			return
-		}
-
-		if tags != nil {
-			// append static Tags to regexp tags
-			for k, v := range s.Tags {
-				tags[k] = v
-			}
+	// subscribe, use topicforwarder for duplicate subscriptions
+	for t, h := range topicHandler {
+		var tok mqtt.Token
+		if len(h) == 1 {
+			// TODO QOS
+			tok = client.Subscribe(t, 0, h[0].Receive)
 		} else {
-			tags = s.Tags
+			tok = client.Subscribe(t, 0, TopicForwarder(h).Receive)
 		}
-		log.Printf("debug: sensor %v %v v=%f",
-			s.Measurement, tags, v,
-		)
-		if f != nil {
-			if err := f(s, tags, v); err != nil {
-				log.Printf("error: unable to process sensor message: %s", err)
-			}
+		tok.Wait()
+		if err := tok.Error(); err != nil {
+			return err
 		}
 	}
-	return callback
+	return nil
 }
 
-type SwitchStatus struct {
-	Pressed bool
-}
+type TopicForwarder []Handler
 
-func BellSwitchHandler(conf Config, f func(SwitchStatus) error) mqtt.MessageHandler {
-	callback := func(client mqtt.Client, message mqtt.Message) {
-		log.Printf("debug: got status message for %s: %s", message.Topic(), message.Payload())
-
-		status := SwitchStatus{}
-		if string(message.Payload()) == "1" {
-			status.Pressed = true
-		}
-
-		log.Printf("debug: bell-switch pressed=%v",
-			status.Pressed,
-		)
-
-		if err := f(status); err != nil {
-			log.Printf("error: unable to process bell-switch message: %s", err)
+func (t TopicForwarder) Receive(client mqtt.Client, message mqtt.Message) {
+	for _, h := range t {
+		if h.Match(message.Topic()) {
+			h.Receive(client, message)
+			return
 		}
 	}
-	return callback
 }
 
 var mainframeCert = `

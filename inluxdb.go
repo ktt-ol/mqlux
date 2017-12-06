@@ -7,6 +7,14 @@ import (
 	"github.com/influxdb/influxdb/client"
 )
 
+type Record struct {
+	Measurement string
+	Tags        map[string]string
+	Value       interface{}
+}
+
+type Writer func([]Record) error
+
 type InfluxDBClient struct {
 	client   *client.Client
 	database string
@@ -33,25 +41,19 @@ func NewInfluxDBClient(conf Config) (*InfluxDBClient, error) {
 	}, nil
 }
 
-func (i *InfluxDBClient) WriteStatus(s SpaceStatus) error {
-	if i == nil {
-		return nil
+func (i *InfluxDBClient) Write(recs []Record) error {
+	pts := make([]client.Point, len(recs))
+	for i, rec := range recs {
+		pts[i] = client.Point{
+			Measurement: rec.Measurement,
+			Fields: map[string]interface{}{
+				"value": rec.Value,
+			},
+			Tags: rec.Tags,
+			Time: time.Now(),
+		}
 	}
-	return i.writePoints(statusPoints(s))
-}
-
-func (i *InfluxDBClient) WriteDevices(d Devices) error {
-	if i == nil {
-		return nil
-	}
-	return i.writePoints(devicesPoints(d))
-}
-
-func (i *InfluxDBClient) WriteSensor(s SensorConfig, tags map[string]string, v float64) error {
-	if i == nil {
-		return nil
-	}
-	return i.writePoints(sensorPoints(s, tags, v))
+	return i.writePoints(pts)
 }
 
 func (i *InfluxDBClient) writePoints(pts []client.Point) error {
@@ -66,65 +68,4 @@ func (i *InfluxDBClient) writePoints(pts []client.Point) error {
 		return err
 	}
 	return nil
-}
-
-func statusPoints(s SpaceStatus) []client.Point {
-	now := time.Now()
-	open := 0.0
-	if s.Open {
-		open = 1.0
-	}
-	if s.Closing {
-		open = 0.5
-	}
-	return []client.Point{
-		{
-			Measurement: "space_open",
-			Fields: map[string]interface{}{
-				"value": open,
-			},
-			Time: now,
-		},
-	}
-}
-
-func devicesPoints(d Devices) []client.Point {
-	now := time.Now()
-	return []client.Point{
-		{
-			Measurement: "devices_total",
-			Fields: map[string]interface{}{
-				"value": d.Devices,
-			},
-			Time: now,
-		},
-		{
-			Measurement: "devices_unknown",
-			Fields: map[string]interface{}{
-				"value": d.Unknown,
-			},
-			Time: now,
-		},
-		{
-			Measurement: "people",
-			Fields: map[string]interface{}{
-				"value": d.People,
-			},
-			Time: now,
-		},
-	}
-}
-
-func sensorPoints(s SensorConfig, tags map[string]string, v float64) []client.Point {
-	now := time.Now()
-	return []client.Point{
-		{
-			Measurement: s.Measurement,
-			Fields: map[string]interface{}{
-				"value": v,
-			},
-			Tags: tags,
-			Time: now,
-		},
-	}
 }

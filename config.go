@@ -44,5 +44,4 @@ type SensorConfig struct {
 	Topic       string
 	Measurement string
 	Tags        map[string]string
-	RegexpTopic *RegexpTopic
 }

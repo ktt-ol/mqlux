@@ -30,7 +30,7 @@ func TestMatch(t *testing.T) {
 			Tags:          map[string]string{"ap": "1", "radio": "2"},
 		},
 	} {
-		rt, err := NewRegexpTopic(test.TopicTemplate)
+		rt, err := NewRegexpTopic(test.TopicTemplate, nil)
 		if err == NoRegexpTopic && test.NoRegexp {
 			continue
 		}

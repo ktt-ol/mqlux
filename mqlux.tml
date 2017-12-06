@@ -3,18 +3,18 @@ url = "tls://mainframe.io:8883"
 #url = "tcp://test.mosquitto.org:1883"
 # url = "tls://spacegate.mainframe.lan:8883"
 # unique id of this client
-clientid = "mqlux-cbcadc20"
+clientid = "mqlux-cbcadc21"
 
 # log all incoming mqtt messages to CSV
 #csvlog = "-"
 #csvlog = /tmp/mainframe-mqtt.log"
 keepalive = "2m"
 
-[influxdb]
-url = "http://127.0.0.1:8086"
-database = "mainframe"
-username = "mainframe"
-password = "*****"
+#[influxdb]
+#url = "http://127.0.0.1:8086"
+#database = "mainframe"
+#username = "mainframe"
+#password = "*****"
 
 [messages.spaceStatus]
 topic = "/access-control-system/space-state"
@@ -38,27 +38,155 @@ people = "peopleCount"
 ## One or more tags (key=value) to distinguish between different sensors.
 # room = "vorne"
 
-[[messages.sensor]]
-topic = "/test/stromVorne/cum"
-measurement = "power"
-[messages.sensor.tags]
-room = "vorne"
+# [[messages.sensor]]
+# topic = "/test/stromVorne/cum"
+# measurement = "power"
+# [messages.sensor.tags]
+# room = "vorne"
+#
+# [[messages.sensor]]
+# topic = "/test/stromVorne/power"
+# measurement = "current_power"
+# [messages.sensor.tags]
+# room = "vorne"
+#
+# [[messages.sensor]]
+# topic = "/test/stromHinten/cum"
+# measurement = "power"
+# [messages.sensor.tags]
+# room = "hinten"
+#
+# [[messages.sensor]]
+# topic = "/test/stromHinten/power"
+# measurement = "current_power"
+# [messages.sensor.tags]
+# room = "hinten"
+#
 
 [[messages.sensor]]
-topic = "/test/stromVorne/power"
-measurement = "current_power"
+topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/voltage"
+measurement = "poe voltage"
 [messages.sensor.tags]
-room = "vorne"
+device = "Zyxel 1900 Lounge"
 
 [[messages.sensor]]
-topic = "/test/stromHinten/cum"
-measurement = "power"
+topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/power"
+measurement = "poe power"
 [messages.sensor.tags]
-room = "hinten"
+device = "Zyxel 1900 Lounge"
 
 [[messages.sensor]]
-topic = "/test/stromHinten/power"
-measurement = "current_power"
+topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/current"
+measurement = "poe current"
 [messages.sensor.tags]
-room = "hinten"
+device = "Zyxel 1900 Lounge"
+
+
+[[messages.sensor]]
+topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/rx-bytes"
+measurement = "rx rate"
+[messages.sensor.tags]
+device = "Zyxel 1900 Lounge"
+
+[[messages.sensor]]
+topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/tx-bytes"
+measurement = "tx rate"
+[messages.sensor.tags]
+device = "Zyxel 1900 Lounge"
+
+
+
+[[messages.sensor]]
+topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/power"
+measurement = "poe"
+[messages.sensor.tags]
+device = "Nortel 48-Port Darkroom"
+
+[[messages.sensor]]
+topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/voltage"
+measurement = "voltage"
+[messages.sensor.tags]
+device = "Nortel 48-Port Darkroom"
+
+[[messages.sensor]]
+topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/current"
+measurement = "current"
+[messages.sensor.tags]
+device = "Nortel 48-Port Darkroom"
+
+[[messages.sensor]]
+topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/rx-bytes"
+measurement = "rx rate"
+[messages.sensor.tags]
+device = "Nortel 48-Port Darkroom"
+
+[[messages.sensor]]
+topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/tx-bytes"
+measurement = "tx rate"
+[messages.sensor.tags]
+device = "Nortel 48-Port Darkroom"
+
+
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/tx-power"
+measurement = "tx-power"
+[messages.sensor.tags]
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/channel"
+measurement = "ap-channel"
+[messages.sensor.tags]
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/noise-floor"
+measurement = "ap-noise"
+[messages.sensor.tags]
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/clients-in-power-save-mode"
+measurement = "ap-powersave"
+[messages.sensor.tags]
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/clients"
+measurement = "ap-clients"
+[messages.sensor.tags]
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/rx-bytes"
+measurement = "rx rate"
+[messages.sensor.tags]
+speed = "sum"
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/tx-unicast-bytes"
+measurement = "tx rate"
+[messages.sensor.tags]
+cast = "uni"
+speed = "sum"
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/tx-multicast-bytes"
+measurement = "tx rate"
+[messages.sensor.tags]
+cast = "multi"
+speed = "sum"
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/rx-bytes"
+measurement = "rx rate"
+[messages.sensor.tags]
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/tx-unicast-bytes"
+measurement = "tx rate"
+[messages.sensor.tags]
+cast = "uni"
+
+[[messages.sensor]]
+topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/tx-multicast-bytes"
+measurement = "tx rate"
+[messages.sensor.tags]
+cast = "multi"
 
