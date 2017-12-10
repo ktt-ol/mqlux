@@ -29,12 +29,22 @@ type MQTTLogger struct {
 	records   chan record
 }
 
-func (w *MQTTLogger) Log(client mqtt.Client, message mqtt.Message) {
+func (w *MQTTLogger) Receive(client mqtt.Client, message mqtt.Message) {
 	w.records <- record{
 		time:    time.Now(),
 		topic:   message.Topic(),
 		payload: message.Payload(),
 	}
+}
+
+func (w *MQTTLogger) Topic() string {
+	return "/#"
+}
+func (w *MQTTLogger) PassOn() bool {
+	return true
+}
+func (w *MQTTLogger) Match(topic string) bool {
+	return true
 }
 
 func (w *MQTTLogger) Stop() {

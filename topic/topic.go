@@ -19,7 +19,7 @@ type Topic struct {
 }
 
 func New(topic, measurement string, tags map[string]string, parser mqlux.Parser, writer mqlux.Writer) (*Topic, error) {
-	r := Topic{
+	t := Topic{
 		measurement: measurement,
 		tags:        tags,
 		parser:      parser,
@@ -28,11 +28,11 @@ func New(topic, measurement string, tags map[string]string, parser mqlux.Parser,
 
 	st, ok := nonRegexpTopic(topic)
 	if !ok {
-		r.subscribeTopic = topic
-		return &r, nil
+		t.subscribeTopic = topic
+		return &t, nil
 	}
 
-	r.subscribeTopic = st
+	t.subscribeTopic = st
 	if !strings.HasSuffix(topic, "$") {
 		topic += "$"
 	}
@@ -40,24 +40,24 @@ func New(topic, measurement string, tags map[string]string, parser mqlux.Parser,
 	if err != nil {
 		return nil, err
 	}
-	r.re = re
-	return &r, nil
+	t.re = re
+	return &t, nil
 }
 
-func (r *Topic) Topic() string {
-	return r.subscribeTopic
+func (t *Topic) Topic() string {
+	return t.subscribeTopic
 }
 
-func (r *Topic) Match(topic string) bool {
-	if r.re == nil {
-		return topic == r.subscribeTopic
+func (t *Topic) Match(topic string) bool {
+	if t.re == nil {
+		return topic == t.subscribeTopic
 	}
-	return r.re.MatchString(topic)
+	return t.re.MatchString(topic)
 }
 
-func (r *Topic) Receive(client mqtt.Client, msg mqtt.Message) {
-	tags := r.Tags(msg.Topic())
-	records, err := r.parser(msg.Topic(), msg.Payload(), r.measurement, tags)
+func (t *Topic) Receive(client mqtt.Client, msg mqtt.Message) {
+	tags := t.Tags(msg.Topic())
+	records, err := t.parser(msg.Topic(), msg.Payload(), t.measurement, tags)
 	if err != nil {
 		// TODO logger
 		log.Println("error: parsing ", err)
@@ -65,7 +65,7 @@ func (r *Topic) Receive(client mqtt.Client, msg mqtt.Message) {
 	}
 
 	if records != nil {
-		err := r.writer(records)
+		err := t.writer(records)
 		if err != nil {
 			// TODO logger
 			log.Println("error: writing records", err)
@@ -73,23 +73,26 @@ func (r *Topic) Receive(client mqtt.Client, msg mqtt.Message) {
 	}
 }
 
-func (r *Topic) Tags(topic string) map[string]string {
-	if r.re == nil {
-		return r.tags
-		return nil
+func (t *Topic) Tags(topic string) map[string]string {
+	if t.re == nil {
+		return t.tags
 	}
-	tagNames := r.re.SubexpNames()
-	tags := make(map[string]string, len(tagNames)+len(r.tags))
-	for k, v := range r.tags {
+	tagNames := t.re.SubexpNames()
+	tags := make(map[string]string, len(tagNames)+len(t.tags))
+	for k, v := range t.tags {
 		tags[k] = v
 	}
-	sub := r.re.FindStringSubmatch(topic)
+	sub := t.re.FindStringSubmatch(topic)
 	for i := 1; i < len(sub); i++ {
 		if sub[i] != "" {
 			tags[tagNames[i]] = sub[i]
 		}
 	}
 	return tags
+}
+
+func (t *Topic) PassOn() bool {
+	return false
 }
 
 func nonRegexpTopic(topic string) (string, bool) {

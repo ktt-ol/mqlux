@@ -59,13 +59,6 @@ func NewMQTTClient(conf Config, onConnect mqtt.OnConnectHandler) (mqtt.Client, e
 	return mc, nil
 }
 
-// func Subscribe(client mqtt.Client, topic string, cb mqtt.MessageHandler) error {
-// 	qos := 0
-// 	tok := client.Subscribe(topic, byte(qos), cb)
-// 	tok.WaitTimeout(5 * time.Second)
-// 	return tok.Error()
-// }
-
 // func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, map[string]string, float64) error) mqtt.MessageHandler {
 // 	callback := func(client mqtt.Client, message mqtt.Message) {
 // 		log.Printf("debug: got status message for %s: %s (%v)", message.Topic(), message.Payload(), s)
@@ -111,6 +104,9 @@ type Handler interface {
 	Match(topic string) bool
 	// Receive takes and processes an incoming mqtt.Message.
 	Receive(client mqtt.Client, message mqtt.Message)
+	// PassOn returns whether a message can be passed on to other handlers as
+	// well. Can be used to implement multiple handlers for the same topic.
+	PassOn() bool
 }
 
 type Parser func(topic string, payload []byte, measurement string, tags map[string]string) ([]Record, error)
@@ -124,15 +120,11 @@ func Subscribe(client mqtt.Client, handler []Handler) error {
 	}
 
 	// subscribe, use topicforwarder for duplicate subscriptions
-	for t, h := range topicHandler {
-		var tok mqtt.Token
-		if len(h) == 1 {
-			// TODO QOS
-			tok = client.Subscribe(t, 0, h[0].Receive)
-		} else {
-			tok = client.Subscribe(t, 0, TopicForwarder(h).Receive)
-		}
-		tok.Wait()
+	for t := range topicHandler {
+		h := topicHandler[t]
+		log.Printf("debug: subscribing to %s for %d handler %s", t, len(h), h[0].Topic())
+		tok := client.Subscribe(t, 0, TopicForwarder(t, h))
+		tok.WaitTimeout(10 * time.Second)
 		if err := tok.Error(); err != nil {
 			return err
 		}
@@ -140,13 +132,20 @@ func Subscribe(client mqtt.Client, handler []Handler) error {
 	return nil
 }
 
-type TopicForwarder []Handler
-
-func (t TopicForwarder) Receive(client mqtt.Client, message mqtt.Message) {
-	for _, h := range t {
-		if h.Match(message.Topic()) {
-			h.Receive(client, message)
-			return
+func TopicForwarder(topic string, handlers []Handler) mqtt.MessageHandler {
+	return func(client mqtt.Client, message mqtt.Message) {
+		if topic != message.Topic() {
+			log.Println(topic, message)
+			panic("invalid topic")
+		}
+		for _, h := range handlers {
+			log.Printf("debug: %s %s %v %v", message.Topic(), h.Topic(), h.Match(message.Topic()), h)
+			if h.Match(message.Topic()) {
+				h.Receive(client, message)
+				if !h.PassOn() {
+					return
+				}
+			}
 		}
 	}
 }
