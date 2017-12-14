@@ -3,8 +3,6 @@ package mqlux
 import (
 	"os"
 	"time"
-
-	"github.com/eclipse/paho.mqtt.golang"
 )
 
 type watchdogHandler struct {
@@ -22,7 +20,7 @@ func NewWatchdogHandler(killAfterSilence time.Duration) *watchdogHandler {
 	go w.run()
 	return &w
 }
-func (w *watchdogHandler) Receive(client mqtt.Client, message mqtt.Message) {
+func (w *watchdogHandler) Receive(msg Message) {
 	select {
 	case w.keepAlive <- struct{}{}:
 	default:

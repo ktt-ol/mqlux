@@ -11,22 +11,22 @@ import (
 )
 
 func NetDeviceParser(conf DevicesConfig) Parser {
-	return func(topic string, payload []byte, measurement string, tags map[string]string) ([]Record, error) {
+	return func(msg Message, measurement string, tags map[string]string) ([]Record, error) {
 
-		var msg map[string]interface{}
-		if err := json.Unmarshal(payload, &msg); err != nil {
-			return nil, errors.Wrapf(err, "unable to marshal json `%s` from %s for %s", payload, topic, measurement)
+		var val map[string]interface{}
+		if err := json.Unmarshal(msg.Payload, &val); err != nil {
+			return nil, errors.Wrapf(err, "unable to marshal json `%s` from %s for %s", msg.Payload, msg.Topic, measurement)
 		}
 
 		var people, unknown, total int
 
-		if v, ok := msg[conf.People].(float64); ok {
+		if v, ok := val[conf.People].(float64); ok {
 			people = int(v)
 		}
-		if v, ok := msg[conf.Unknown].(float64); ok {
+		if v, ok := val[conf.Unknown].(float64); ok {
 			unknown = int(v)
 		}
-		if v, ok := msg[conf.Devices].(float64); ok {
+		if v, ok := val[conf.Devices].(float64); ok {
 			total = int(v)
 		}
 		recs := []Record{
@@ -56,13 +56,13 @@ func SpaceStatusParser(conf SpaceStatusConfig) Parser {
 	closing := regexp.MustCompile(conf.SpaceClosing)
 	open := regexp.MustCompile(conf.SpaceOpen)
 
-	return func(topic string, payload []byte, measurement string, tags map[string]string) ([]Record, error) {
+	return func(msg Message, measurement string, tags map[string]string) ([]Record, error) {
 		val := 0.0
 
-		if open.Match(payload) {
+		if open.Match(msg.Payload) {
 			log.Printf("debug: net-devices open")
 			val = 1.0
-		} else if closing.Match(payload) {
+		} else if closing.Match(msg.Payload) {
 			log.Printf("debug: net-devices closing")
 			val = 0.5
 		} else {
@@ -78,10 +78,10 @@ func SpaceStatusParser(conf SpaceStatusConfig) Parser {
 	}
 }
 
-func FloatParser(topic string, payload []byte, measurement string, tags map[string]string) ([]Record, error) {
-	v, err := strconv.ParseFloat(strings.TrimSpace(string(payload)), 32)
+func FloatParser(msg Message, measurement string, tags map[string]string) ([]Record, error) {
+	v, err := strconv.ParseFloat(strings.TrimSpace(string(msg.Payload)), 32)
 	if err != nil {
-		return nil, errors.Wrapf(err, "parsing float %s from %s for %s", payload, topic, measurement)
+		return nil, errors.Wrapf(err, "parsing float %s from %s for %s", msg.Payload, msg.Topic, measurement)
 	}
 
 	return []Record{

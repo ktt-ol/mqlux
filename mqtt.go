@@ -68,11 +68,17 @@ type Handler interface {
 	Topic() string
 	// Match returns whether this handler handles a specific topic.
 	Match(topic string) bool
-	// Receive takes and processes an incoming mqtt.Message.
-	Receive(client mqtt.Client, message mqtt.Message)
+	// Receive takes and processes an incoming Message.
+	Receive(message Message)
 }
 
-type Parser func(topic string, payload []byte, measurement string, tags map[string]string) ([]Record, error)
+type Parser func(msg Message, measurement string, tags map[string]string) ([]Record, error)
+
+type Message struct {
+	Time    time.Time
+	Topic   string
+	Payload []byte
+}
 
 // Subscribe subscribes all handers to the given client.
 // Should only be called once for each client.
@@ -89,12 +95,17 @@ func Subscribe(client mqtt.Client, handler []Handler) error {
 	}
 
 	fwd := func(client mqtt.Client, message mqtt.Message) {
+		msg := Message{
+			Time:    time.Now(),
+			Payload: message.Payload(),
+			Topic:   message.Topic(),
+		}
 		handlers := r.Find(strings.Split(message.Topic(), "/"))
 		// log.Printf("debug: forwarding %s to %d handlers", message.Topic(), len(handlers))
 		for _, h := range handlers {
 			if h, ok := h.(Handler); ok {
 				if h.Match(message.Topic()) {
-					h.Receive(client, message)
+					h.Receive(msg)
 				}
 			} else {
 				panic("router returned non-handler type")

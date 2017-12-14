@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ktt-ol/mqlux"
 )
 
@@ -55,9 +54,9 @@ func (t *Topic) Match(topic string) bool {
 	return t.re.MatchString(topic)
 }
 
-func (t *Topic) Receive(client mqtt.Client, msg mqtt.Message) {
-	tags := t.Tags(msg.Topic())
-	records, err := t.parser(msg.Topic(), msg.Payload(), t.measurement, tags)
+func (t *Topic) Receive(msg mqlux.Message) {
+	tags := t.Tags(msg.Topic)
+	records, err := t.parser(msg, t.measurement, tags)
 	if err != nil {
 		// TODO logger
 		log.Println("error: parsing ", err)
