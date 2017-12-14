@@ -80,31 +80,17 @@ type Message struct {
 	Payload []byte
 }
 
-// Subscribe subscribes all handers to the given client.
-// Should only be called once for each client.
-func Subscribe(client mqtt.Client, handler []Handler) error {
-
-	// mqtt.Client only supports one callback for each topic and
-	// subscribing to a wildcard topic can overwrite callbacks
-	// to specific topics. We use our own router to work around
-	// this limitation.
-
+func Prepare(handler []Handler) func(Message) {
 	r := router.New()
 	for _, h := range handler {
 		r.Add(strings.Split(h.Topic(), "/"), h)
 	}
-
-	fwd := func(client mqtt.Client, message mqtt.Message) {
-		msg := Message{
-			Time:    time.Now(),
-			Payload: message.Payload(),
-			Topic:   message.Topic(),
-		}
-		handlers := r.Find(strings.Split(message.Topic(), "/"))
-		// log.Printf("debug: forwarding %s to %d handlers", message.Topic(), len(handlers))
+	fwd := func(msg Message) {
+		handlers := r.Find(strings.Split(msg.Topic, "/"))
+		// log.Printf("debug: forwarding %s to %d handlers", msg.Topic, len(handlers))
 		for _, h := range handlers {
 			if h, ok := h.(Handler); ok {
-				if h.Match(message.Topic()) {
+				if h.Match(msg.Topic) {
 					h.Receive(msg)
 				}
 			} else {
@@ -112,8 +98,25 @@ func Subscribe(client mqtt.Client, handler []Handler) error {
 			}
 		}
 	}
+	return fwd
+}
 
-	tok := client.Subscribe("/#", 0, fwd)
+// Subscribe subscribes all handers to the given client.
+// Should only be called once for each client.
+func Subscribe(client mqtt.Client, handler []Handler) error {
+	// mqtt.Client only supports one callback for each topic and
+	// subscribing to a wildcard topic can overwrite callbacks
+	// to specific topics. We use our own router to work around
+	// this limitation.
+	fwd := Prepare(handler)
+	tok := client.Subscribe("/#", 0, func(client mqtt.Client, message mqtt.Message) {
+		msg := Message{
+			Time:    time.Now(),
+			Payload: message.Payload(),
+			Topic:   message.Topic(),
+		}
+		fwd(msg)
+	})
 	tok.WaitTimeout(30 * time.Second)
 	return tok.Error()
 }

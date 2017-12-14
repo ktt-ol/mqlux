@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -11,7 +13,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/comail/colog"
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ktt-ol/mqlux"
 	"github.com/ktt-ol/mqlux/topic"
 )
@@ -22,6 +24,7 @@ func main() {
 	colog.SetMinLevel(colog.LInfo)
 
 	configFile := flag.String("config", "mqlux.tml", "configuration")
+	csvFile := flag.String("messages-csv", "", "read messages from CSV file; disables InfluxDB output")
 	debug := flag.Bool("debug", false, "print debug messages")
 	flag.Parse()
 
@@ -38,7 +41,7 @@ func main() {
 	}
 
 	var writer mqlux.Writer
-	if config.InfluxDB.URL != "" {
+	if config.InfluxDB.URL != "" && *csvFile == "" {
 		db, err := mqlux.NewInfluxDBClient(config)
 		if err != nil {
 			log.Fatal(err)
@@ -46,8 +49,19 @@ func main() {
 		writer = db.Write
 	} else {
 		writer = func(recs []mqlux.Record) error {
+			var buf bytes.Buffer
 			for _, rec := range recs {
-				log.Println(rec)
+				buf.Reset()
+				buf.WriteString("measurement ")
+				buf.WriteString(rec.Measurement)
+				fmt.Fprintf(&buf, " -> %v ", rec.Value)
+				for k, v := range rec.Tags {
+					buf.WriteString(k)
+					buf.WriteString("='")
+					buf.WriteString(v)
+					buf.WriteString("' ")
+				}
+				log.Println(buf.String())
 			}
 			return nil
 		}
@@ -55,7 +69,7 @@ func main() {
 
 	handlers := []mqlux.Handler{}
 
-	if config.MQTT.CSVLog != "" {
+	if config.MQTT.CSVLog != "" && *csvFile == "" {
 		var out io.Writer
 		if config.MQTT.CSVLog == "-" {
 			out = os.Stdout
@@ -123,6 +137,15 @@ func main() {
 			log.Fatal(err)
 		}
 		handlers = append(handlers, handler)
+	}
+
+	if *csvFile != "" {
+		fwd := mqlux.Prepare(handlers)
+		err = mqlux.MessagesFromCSV(*csvFile, fwd)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 
 	log.Printf("debug: connecting to subscribe for %d handlers", len(handlers))
