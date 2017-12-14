@@ -4,9 +4,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"log"
+	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/ktt-ol/mqlux/router"
 )
 
 func defaultCertPool() *x509.CertPool {
@@ -59,42 +61,6 @@ func NewMQTTClient(conf Config, onConnect mqtt.OnConnectHandler) (mqtt.Client, e
 	return mc, nil
 }
 
-// func SensorHandler(conf Config, s SensorConfig, f func(SensorConfig, map[string]string, float64) error) mqtt.MessageHandler {
-// 	callback := func(client mqtt.Client, message mqtt.Message) {
-// 		log.Printf("debug: got status message for %s: %s (%v)", message.Topic(), message.Payload(), s)
-// 		var tags map[string]string
-// 		if s.RegexpTopic != nil {
-// 			tags = s.RegexpTopic.Tags(message.Topic())
-// 			if tags == nil {
-// 				return
-// 			}
-// 		}
-//
-// 		v, err := strconv.ParseFloat(strings.TrimSpace(string(message.Payload())), 64)
-// 		if err != nil {
-// 			log.Printf("error: unable to parse float ('%s'): %s", message.Payload(), err)
-// 			return
-// 		}
-//
-// 		if tags != nil {
-// 			// append static Tags to regexp tags
-// 			for k, v := range s.Tags {
-// 				tags[k] = v
-// 			}
-// 		} else {
-// 			tags = s.Tags
-// 		}
-// 		log.Printf("debug: sensor %v %v v=%f",
-// 			s.Measurement, tags, v,
-// 		)
-// 		if f != nil {
-// 			if err := f(s, tags, v); err != nil {
-// 				log.Printf("error: unable to process sensor message: %s", err)
-// 			}
-// 		}
-// 	}
-// }
-//
 type Handler interface {
 	// Topic returns the topic this handler should be subscribed to.
 	// The topic can contain wildcards. Match will check if
@@ -104,50 +70,41 @@ type Handler interface {
 	Match(topic string) bool
 	// Receive takes and processes an incoming mqtt.Message.
 	Receive(client mqtt.Client, message mqtt.Message)
-	// PassOn returns whether a message can be passed on to other handlers as
-	// well. Can be used to implement multiple handlers for the same topic.
-	PassOn() bool
 }
 
 type Parser func(topic string, payload []byte, measurement string, tags map[string]string) ([]Record, error)
 
+// Subscribe subscribes all handers to the given client.
+// Should only be called once for each client.
 func Subscribe(client mqtt.Client, handler []Handler) error {
-	// group handler by topic
-	topicHandler := make(map[string][]Handler)
+
+	// mqtt.Client only supports one callback for each topic and
+	// subscribing to a wildcard topic can overwrite callbacks
+	// to specific topics. We use our own router to work around
+	// this limitation.
+
+	r := router.New()
 	for _, h := range handler {
-		topic := h.Topic()
-		topicHandler[topic] = append(topicHandler[topic], h)
+		r.Add(strings.Split(h.Topic(), "/"), h)
 	}
 
-	// subscribe, use topicforwarder for duplicate subscriptions
-	for t := range topicHandler {
-		h := topicHandler[t]
-		log.Printf("debug: subscribing to %s for %d handler %s", t, len(h), h[0].Topic())
-		tok := client.Subscribe(t, 0, TopicForwarder(t, h))
-		tok.WaitTimeout(10 * time.Second)
-		if err := tok.Error(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func TopicForwarder(topic string, handlers []Handler) mqtt.MessageHandler {
-	return func(client mqtt.Client, message mqtt.Message) {
-		if topic != message.Topic() {
-			log.Println(topic, message)
-			panic("invalid topic")
-		}
+	fwd := func(client mqtt.Client, message mqtt.Message) {
+		handlers := r.Find(strings.Split(message.Topic(), "/"))
+		// log.Printf("debug: forwarding %s to %d handlers", message.Topic(), len(handlers))
 		for _, h := range handlers {
-			log.Printf("debug: %s %s %v %v", message.Topic(), h.Topic(), h.Match(message.Topic()), h)
-			if h.Match(message.Topic()) {
-				h.Receive(client, message)
-				if !h.PassOn() {
-					return
+			if h, ok := h.(Handler); ok {
+				if h.Match(message.Topic()) {
+					h.Receive(client, message)
 				}
+			} else {
+				panic("router returned non-handler type")
 			}
 		}
 	}
+
+	tok := client.Subscribe("/#", 0, fwd)
+	tok.WaitTimeout(30 * time.Second)
+	return tok.Error()
 }
 
 var mainframeCert = `

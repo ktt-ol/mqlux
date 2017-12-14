@@ -6,7 +6,7 @@ url = "tls://mainframe.io:8883"
 clientid = "mqlux-cbcadc21"
 
 # log all incoming mqtt messages to CSV
-#csvlog = "-"
+# csvlog = "-"
 #csvlog = /tmp/mainframe-mqtt.log"
 keepalive = "2m"
 
@@ -61,7 +61,7 @@ people = "peopleCount"
 # measurement = "current_power"
 # [messages.sensor.tags]
 # room = "hinten"
-#
+
 
 [[messages.sensor]]
 topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/voltage"

@@ -54,7 +54,6 @@ func main() {
 	}
 
 	handlers := []mqlux.Handler{}
-	// add logger and keepalive first, as these handlers can PassOn messages to other handlers
 
 	if config.MQTT.CSVLog != "" {
 		var out io.Writer

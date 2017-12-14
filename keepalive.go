@@ -34,9 +34,7 @@ func (w *watchdogHandler) Receive(client mqtt.Client, message mqtt.Message) {
 func (w *watchdogHandler) Topic() string {
 	return "/#"
 }
-func (w *watchdogHandler) PassOn() bool {
-	return true
-}
+
 func (w *watchdogHandler) Match(topic string) bool {
 	return true
 }

@@ -91,10 +91,6 @@ func (t *Topic) Tags(topic string) map[string]string {
 	return tags
 }
 
-func (t *Topic) PassOn() bool {
-	return false
-}
-
 func nonRegexpTopic(topic string) (string, bool) {
 	nonRegexp := regexp.MustCompile("^[a-zA-Z0-9-_]*$")
 	var result string
