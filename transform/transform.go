@@ -1,31 +1,64 @@
 package transform
 
 import (
+	"sync"
+
 	"github.com/ktt-ol/mqlux"
 	"github.com/pkg/errors"
 	"github.com/robertkrimen/otto"
 )
 
-// func main() {
+type Transformer struct {
+	vm *otto.Otto
+	mu sync.Mutex
+}
 
-// 	vm := otto.New()
-// 	script, err := vm.Compile("", `function foo(msg) { return JSON.parse(msg); }`)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	val, err := vm.Run(script)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	for i := 0; i < 1; i++ {
-// 		val, err = vm.Run(`foo("{\"measurement\": \"hello\", \"tags\": {\"foo\": \"bar\"}, \"value\": null}")`)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		ToRecord(val)
-// 	}
-// 	log.Println(ToRecord(val))
-// }
+func New(script string) (*Transformer, error) {
+	t := Transformer{
+		vm: otto.New(),
+	}
+	_, err := t.vm.Run(script)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (t *Transformer) Parse(msg mqlux.Message, measurement string, tags map[string]string) ([]mqlux.Record, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.vm.Set("__topic", msg.Topic)
+	t.vm.Set("__payload", string(msg.Payload))
+	v, err := t.vm.Run("parse(__topic, __payload);")
+	if err != nil {
+		return nil, errors.Wrap(err, "calling custom parse function")
+	}
+	recs, err := valueToRecords(v)
+	if err != nil {
+		return nil, errors.Wrap(err, "extracting parse result")
+	}
+
+	for i := range recs {
+		if recs[i].Measurement == "" {
+			recs[i].Measurement = measurement
+		}
+		if recs[i].Tags == nil && tags != nil {
+			recs[i].Tags = tags
+		} else if recs[i].Tags != nil && tags != nil {
+			combined := make(map[string]string)
+			for k, v := range tags {
+				combined[k] = v
+			}
+			for k, v := range recs[i].Tags {
+				combined[k] = v
+			}
+			recs[i].Tags = combined
+		}
+	}
+
+	return recs, nil
+
+}
 
 func valueToRecords(v otto.Value) ([]mqlux.Record, error) {
 	if v.IsObject() && v.Object().Class() == "Array" {
