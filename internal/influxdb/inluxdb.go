@@ -1,26 +1,22 @@
-package mqlux
+package influxdb
 
 import (
 	"net/url"
 	"time"
 
 	"github.com/influxdb/influxdb/client"
+	"github.com/ktt-ol/mqlux/internal/config"
+	"github.com/ktt-ol/mqlux/internal/mqlux"
 )
 
-type Record struct {
-	Measurement string
-	Tags        map[string]string
-	Value       interface{}
-}
-
-type Writer func([]Record) error
+type Writer func([]mqlux.Record) error
 
 type InfluxDBClient struct {
 	client   *client.Client
 	database string
 }
 
-func NewInfluxDBClient(conf Config) (*InfluxDBClient, error) {
+func NewInfluxDBClient(conf config.Config) (*InfluxDBClient, error) {
 	clientCfg := client.NewConfig()
 	u, err := url.Parse(conf.InfluxDB.URL)
 	if err != nil {
@@ -41,7 +37,7 @@ func NewInfluxDBClient(conf Config) (*InfluxDBClient, error) {
 	}, nil
 }
 
-func (i *InfluxDBClient) Write(recs []Record) error {
+func (i *InfluxDBClient) Write(recs []mqlux.Record) error {
 	pts := make([]client.Point, len(recs))
 	for i, rec := range recs {
 		pts[i] = client.Point{

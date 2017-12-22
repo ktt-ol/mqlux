@@ -5,7 +5,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ktt-ol/mqlux"
+	"github.com/ktt-ol/mqlux/internal/influxdb"
+	"github.com/ktt-ol/mqlux/internal/mqlux"
+	"github.com/ktt-ol/mqlux/internal/mqtt"
 )
 
 type Topic struct {
@@ -13,11 +15,11 @@ type Topic struct {
 	re             *regexp.Regexp
 	measurement    string
 	tags           map[string]string
-	parser         mqlux.Parser
-	writer         mqlux.Writer
+	parser         mqtt.Parser
+	writer         influxdb.Writer
 }
 
-func New(topic, measurement string, tags map[string]string, parser mqlux.Parser, writer mqlux.Writer) (*Topic, error) {
+func New(topic, measurement string, tags map[string]string, parser mqtt.Parser, writer influxdb.Writer) (*Topic, error) {
 	t := Topic{
 		measurement: measurement,
 		tags:        tags,

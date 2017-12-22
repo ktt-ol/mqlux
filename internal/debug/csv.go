@@ -1,4 +1,4 @@
-package mqlux
+package debug
 
 import (
 	"encoding/csv"
@@ -6,9 +6,11 @@ import (
 	"log"
 	"os"
 	"time"
+
+	"github.com/ktt-ol/mqlux/internal/mqlux"
 )
 
-func MessagesFromCSV(filename string, fwd func(Message)) error {
+func MessagesFromCSV(filename string, fwd func(mqlux.Message)) error {
 	var r io.Reader
 	if filename == "-" {
 		r = os.Stdin
@@ -28,7 +30,7 @@ func MessagesFromCSV(filename string, fwd func(Message)) error {
 		sem <- struct{}{}
 	}
 
-	send := func(msg Message) {
+	send := func(msg mqlux.Message) {
 		fwd(msg)
 		sem <- struct{}{}
 	}
@@ -43,7 +45,7 @@ func MessagesFromCSV(filename string, fwd func(Message)) error {
 		if err != nil {
 			return err
 		}
-		msg := Message{
+		msg := mqlux.Message{
 			Topic:   record[1],
 			Payload: ([]byte)(record[2]),
 		}

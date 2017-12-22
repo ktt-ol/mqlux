@@ -13,9 +13,16 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/comail/colog"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/ktt-ol/mqlux"
-	"github.com/ktt-ol/mqlux/topic"
+	paho "github.com/eclipse/paho.mqtt.golang"
+	"github.com/ktt-ol/mqlux/internal/config"
+	"github.com/ktt-ol/mqlux/internal/debug"
+	"github.com/ktt-ol/mqlux/internal/handler/csv"
+	"github.com/ktt-ol/mqlux/internal/handler/keepalive"
+	"github.com/ktt-ol/mqlux/internal/handler/topic"
+	"github.com/ktt-ol/mqlux/internal/influxdb"
+	"github.com/ktt-ol/mqlux/internal/mqlux"
+	"github.com/ktt-ol/mqlux/internal/mqtt"
+	"github.com/ktt-ol/mqlux/internal/parser"
 )
 
 func main() {
@@ -25,24 +32,24 @@ func main() {
 
 	configFile := flag.String("config", "mqlux.tml", "configuration")
 	csvFile := flag.String("messages-csv", "", "read messages from CSV file; disables InfluxDB output")
-	debug := flag.Bool("debug", false, "print debug messages")
+	isDebug := flag.Bool("debug", false, "print debug messages")
 	flag.Parse()
 
-	if *debug {
+	if *isDebug {
 		colog.SetMinLevel(colog.LDebug)
 		// mqtt debug is very verbose
 		// mqtt.DEBUG = log.New(os.Stdout, "[mqtt] ", log.LstdFlags)
 	}
 
-	config := mqlux.Config{}
+	config := config.Config{}
 	_, err := toml.DecodeFile(*configFile, &config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var writer mqlux.Writer
+	var writer influxdb.Writer
 	if config.InfluxDB.URL != "" && *csvFile == "" {
-		db, err := mqlux.NewInfluxDBClient(config)
+		db, err := influxdb.NewInfluxDBClient(config)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -67,7 +74,7 @@ func main() {
 		}
 	}
 
-	handlers := []mqlux.Handler{}
+	handlers := []mqtt.Handler{}
 
 	if config.MQTT.CSVLog != "" && *csvFile == "" {
 		var out io.Writer
@@ -81,7 +88,7 @@ func main() {
 			defer f.Close()
 			out = f
 		}
-		logger, err := mqlux.NewMQTTLogger(out)
+		logger, err := csv.NewMQTTLogger(out)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -94,7 +101,7 @@ func main() {
 		if err != nil {
 			log.Fatal("invalid keepalive duration", err)
 		}
-		watchdog := mqlux.NewWatchdogHandler(keepAlive)
+		watchdog := keepalive.NewWatchdogHandler(keepAlive)
 		defer watchdog.Stop()
 		handlers = append(handlers, watchdog)
 	}
@@ -103,7 +110,7 @@ func main() {
 		handler, err := topic.New(
 			config.Messages.Devices.Topic,
 			"", nil, //set by NetDeviceParser
-			mqlux.NetDeviceParser(config.Messages.Devices),
+			parser.NetDeviceParser(config.Messages.Devices),
 			writer,
 		)
 		if err != nil {
@@ -116,7 +123,7 @@ func main() {
 		handler, err := topic.New(
 			config.Messages.SpaceStatus.Topic,
 			"", nil, //set by SpaceStatusParser
-			mqlux.SpaceStatusParser(config.Messages.SpaceStatus),
+			parser.SpaceStatusParser(config.Messages.SpaceStatus),
 			writer,
 		)
 		if err != nil {
@@ -130,7 +137,7 @@ func main() {
 			sensor.Topic,
 			sensor.Measurement,
 			sensor.Tags,
-			mqlux.FloatParser,
+			parser.FloatParser,
 			writer,
 		)
 		if err != nil {
@@ -140,8 +147,8 @@ func main() {
 	}
 
 	if *csvFile != "" {
-		fwd := mqlux.Prepare(handlers)
-		err = mqlux.MessagesFromCSV(*csvFile, fwd)
+		fwd := mqtt.Prepare(handlers)
+		err = debug.MessagesFromCSV(*csvFile, fwd)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -149,9 +156,9 @@ func main() {
 	}
 
 	log.Printf("debug: connecting to subscribe for %d handlers", len(handlers))
-	_, err = mqlux.NewMQTTClient(config, func(c mqtt.Client) {
+	_, err = mqtt.NewMQTTClient(config, func(c paho.Client) {
 		log.Print("debug: on connect")
-		mqlux.Subscribe(c, handlers)
+		mqtt.Subscribe(c, handlers)
 	})
 	if err != nil {
 		log.Fatal(err)

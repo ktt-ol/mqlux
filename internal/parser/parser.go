@@ -1,4 +1,4 @@
-package mqlux
+package parser
 
 import (
 	"encoding/json"
@@ -7,11 +7,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ktt-ol/mqlux/internal/config"
+	"github.com/ktt-ol/mqlux/internal/mqlux"
+	"github.com/ktt-ol/mqlux/internal/mqtt"
 	"github.com/pkg/errors"
 )
 
-func NetDeviceParser(conf DevicesConfig) Parser {
-	return func(msg Message, measurement string, tags map[string]string) ([]Record, error) {
+func NetDeviceParser(conf config.Devices) mqtt.Parser {
+	return func(msg mqlux.Message, measurement string, tags map[string]string) ([]mqlux.Record, error) {
 
 		var val map[string]interface{}
 		if err := json.Unmarshal(msg.Payload, &val); err != nil {
@@ -29,16 +32,16 @@ func NetDeviceParser(conf DevicesConfig) Parser {
 		if v, ok := val[conf.Devices].(float64); ok {
 			total = int(v)
 		}
-		recs := []Record{
-			Record{
+		recs := []mqlux.Record{
+			mqlux.Record{
 				Measurement: "devices_unknown",
 				Value:       unknown,
 			},
-			Record{
+			mqlux.Record{
 				Measurement: "devices_total",
 				Value:       total,
 			},
-			Record{
+			mqlux.Record{
 				Measurement: "people",
 				Value:       people,
 			},
@@ -52,11 +55,11 @@ func NetDeviceParser(conf DevicesConfig) Parser {
 	}
 }
 
-func SpaceStatusParser(conf SpaceStatusConfig) Parser {
+func SpaceStatusParser(conf config.SpaceStatus) mqtt.Parser {
 	closing := regexp.MustCompile(conf.SpaceClosing)
 	open := regexp.MustCompile(conf.SpaceOpen)
 
-	return func(msg Message, measurement string, tags map[string]string) ([]Record, error) {
+	return func(msg mqlux.Message, measurement string, tags map[string]string) ([]mqlux.Record, error) {
 		val := 0.0
 
 		if open.Match(msg.Payload) {
@@ -69,7 +72,7 @@ func SpaceStatusParser(conf SpaceStatusConfig) Parser {
 			log.Printf("debug: net-devices closed")
 		}
 
-		return []Record{
+		return []mqlux.Record{
 			{
 				Measurement: "space_open",
 				Value:       val,
@@ -78,13 +81,13 @@ func SpaceStatusParser(conf SpaceStatusConfig) Parser {
 	}
 }
 
-func FloatParser(msg Message, measurement string, tags map[string]string) ([]Record, error) {
+func FloatParser(msg mqlux.Message, measurement string, tags map[string]string) ([]mqlux.Record, error) {
 	v, err := strconv.ParseFloat(strings.TrimSpace(string(msg.Payload)), 32)
 	if err != nil {
 		return nil, errors.Wrapf(err, "parsing float %s from %s for %s", msg.Payload, msg.Topic, measurement)
 	}
 
-	return []Record{
+	return []mqlux.Record{
 		{
 			Measurement: measurement,
 			Tags:        tags,

@@ -1,17 +1,17 @@
-package mqlux
+package config
 
 type Config struct {
-	MQTT     MQTTConfig
-	InfluxDB InfluxDBConfig
+	MQTT     MQTT
+	InfluxDB InfluxDB
 	Messages struct {
-		Devices     DevicesConfig
-		SpaceStatus SpaceStatusConfig
-		Sensors     []SensorConfig `toml:"sensor"`
+		Devices     Devices
+		SpaceStatus SpaceStatus
+		Sensors     []Sensor `toml:"sensor"`
 	}
 	CACertFiles []string
 }
 
-type MQTTConfig struct {
+type MQTT struct {
 	URL       string
 	Username  string
 	Password  string
@@ -20,27 +20,27 @@ type MQTTConfig struct {
 	KeepAlive string
 }
 
-type InfluxDBConfig struct {
+type InfluxDB struct {
 	URL      string
 	Username string
 	Password string
 	Database string
 }
 
-type SpaceStatusConfig struct {
+type SpaceStatus struct {
 	Topic        string
 	SpaceOpen    string
 	SpaceClosing string
 }
 
-type DevicesConfig struct {
+type Devices struct {
 	Topic   string
 	Unknown string
 	Devices string
 	People  string
 }
 
-type SensorConfig struct {
+type Sensor struct {
 	Topic       string
 	Measurement string
 	Tags        map[string]string

@@ -1,4 +1,4 @@
-package mqlux
+package mqtt
 
 import (
 	"crypto/tls"
@@ -8,7 +8,9 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/ktt-ol/mqlux/router"
+	"github.com/ktt-ol/mqlux/internal/config"
+	"github.com/ktt-ol/mqlux/internal/mqlux"
+	"github.com/ktt-ol/mqlux/internal/router"
 )
 
 func defaultCertPool() *x509.CertPool {
@@ -23,7 +25,7 @@ func defaultCertPool() *x509.CertPool {
 	return certs
 }
 
-func NewMQTTClient(conf Config, onConnect mqtt.OnConnectHandler) (mqtt.Client, error) {
+func NewMQTTClient(conf config.Config, onConnect mqtt.OnConnectHandler) (mqtt.Client, error) {
 	opts := mqtt.NewClientOptions()
 
 	opts.AddBroker(conf.MQTT.URL)
@@ -69,23 +71,17 @@ type Handler interface {
 	// Match returns whether this handler handles a specific topic.
 	Match(topic string) bool
 	// Receive takes and processes an incoming Message.
-	Receive(message Message)
+	Receive(message mqlux.Message)
 }
 
-type Parser func(msg Message, measurement string, tags map[string]string) ([]Record, error)
+type Parser func(msg mqlux.Message, measurement string, tags map[string]string) ([]mqlux.Record, error)
 
-type Message struct {
-	Time    time.Time
-	Topic   string
-	Payload []byte
-}
-
-func Prepare(handler []Handler) func(Message) {
+func Prepare(handler []Handler) func(mqlux.Message) {
 	r := router.New()
 	for _, h := range handler {
 		r.Add(strings.Split(h.Topic(), "/"), h)
 	}
-	fwd := func(msg Message) {
+	fwd := func(msg mqlux.Message) {
 		handlers := r.Find(strings.Split(msg.Topic, "/"))
 		// log.Printf("debug: forwarding %s to %d handlers", msg.Topic, len(handlers))
 		for _, h := range handlers {
@@ -110,7 +106,7 @@ func Subscribe(client mqtt.Client, handler []Handler) error {
 	// this limitation.
 	fwd := Prepare(handler)
 	tok := client.Subscribe("/#", 0, func(client mqtt.Client, message mqtt.Message) {
-		msg := Message{
+		msg := mqlux.Message{
 			Time:    time.Now(),
 			Payload: message.Payload(),
 			Topic:   message.Topic(),

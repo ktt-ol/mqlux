@@ -1,8 +1,10 @@
-package mqlux
+package keepalive
 
 import (
 	"os"
 	"time"
+
+	"github.com/ktt-ol/mqlux/internal/mqlux"
 )
 
 type watchdogHandler struct {
@@ -20,7 +22,7 @@ func NewWatchdogHandler(killAfterSilence time.Duration) *watchdogHandler {
 	go w.run()
 	return &w
 }
-func (w *watchdogHandler) Receive(msg Message) {
+func (w *watchdogHandler) Receive(msg mqlux.Message) {
 	select {
 	case w.keepAlive <- struct{}{}:
 	default:

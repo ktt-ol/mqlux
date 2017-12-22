@@ -1,4 +1,4 @@
-package transform
+package script
 
 import (
 	"sync"

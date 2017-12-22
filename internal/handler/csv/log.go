@@ -1,16 +1,18 @@
-package mqlux
+package csv
 
 import (
 	"encoding/csv"
 	"io"
 	"log"
 	"time"
+
+	"github.com/ktt-ol/mqlux/internal/mqlux"
 )
 
 func NewMQTTLogger(out io.Writer) (*MQTTLogger, error) {
 	logger := &MQTTLogger{
 		csvWriter: csv.NewWriter(out),
-		records:   make(chan Message, 64),
+		records:   make(chan mqlux.Message, 64),
 	}
 	go logger.run()
 	return logger, nil
@@ -18,10 +20,10 @@ func NewMQTTLogger(out io.Writer) (*MQTTLogger, error) {
 
 type MQTTLogger struct {
 	csvWriter *csv.Writer
-	records   chan Message
+	records   chan mqlux.Message
 }
 
-func (w *MQTTLogger) Receive(msg Message) {
+func (w *MQTTLogger) Receive(msg mqlux.Message) {
 	w.records <- msg
 }
 
