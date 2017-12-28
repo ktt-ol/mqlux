@@ -1,12 +1,10 @@
 package config
 
 type Config struct {
-	MQTT     MQTT
-	InfluxDB InfluxDB
-	Messages struct {
-		Sensors []Sensor `toml:"sensor"`
-	}
-	CACertFiles []string
+	MQTT          MQTT
+	InfluxDB      InfluxDB
+	Subscriptions []Subscription `toml:"subscription"`
+	CACertFiles   []string
 }
 
 type MQTT struct {
@@ -25,7 +23,7 @@ type InfluxDB struct {
 	Database string
 }
 
-type Sensor struct {
+type Subscription struct {
 	Topic       string
 	Measurement string
 	Tags        map[string]string

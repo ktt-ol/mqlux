@@ -109,10 +109,10 @@ func main() {
 		handlers = append(handlers, watchdog)
 	}
 
-	for _, sensor := range config.Messages.Sensors {
+	for _, sub := range config.Subscriptions {
 		var p mqtt.Parser
-		if sensor.Script != "" {
-			vm, err := script.New(sensor.Script)
+		if sub.Script != "" {
+			vm, err := script.New(sub.Script)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -122,9 +122,9 @@ func main() {
 		}
 
 		handler, err := topic.New(
-			sensor.Topic,
-			sensor.Measurement,
-			sensor.Tags,
+			sub.Topic,
+			sub.Measurement,
+			sub.Tags,
 			p,
 			writer,
 		)

@@ -16,19 +16,7 @@ keepalive = "2m"
 #username = "mainframe"
 #password = "*****"
 
-# [messages.spaceStatus]
-# topic = "/access-control-system/space-state"
-# spaceopen = "^(open(ed)?|closing)$"
-# spaceclosing = "^closing$"
-
-# [messages.devices]
-# topic = "/net/devices"
-# devices = "deviceCount"
-# unknown = "unknownDevicesCount"
-# people = "peopleCount"
-
-
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/devices"
 script = """
 function parse(topic, payload) { 
@@ -41,7 +29,7 @@ function parse(topic, payload) {
 }
 """
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/access-control-system/space-state"
 measurement = "space_open"
 script = """
@@ -60,165 +48,165 @@ function parse(topic, payload) {
 """
 
 ## For float type sensors:
-# [[messages.sensor]]
+# [[subscription]]
 ## The MQTT topic
 # topic = "/test/stromVorne/cum"
 ## The measurement name for influxdb.
 ## Similar sensors should all share the same `measurement` name.
 ## measurement = "power"
-# [messages.sensor.tags]
+# [subscription.tags]
 ## One or more tags (key=value) to distinguish between different sensors.
 # room = "vorne"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/test/stromVorne/cum"
 measurement = "power"
-[messages.sensor.tags]
+[subscription.tags]
 room = "vorne"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/test/stromVorne/power"
 measurement = "current_power"
-[messages.sensor.tags]
+[subscription.tags]
 room = "vorne"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/test/stromHinten/cum"
 measurement = "power"
-[messages.sensor.tags]
+[subscription.tags]
 room = "hinten"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/test/stromHinten/power"
 measurement = "current_power"
-[messages.sensor.tags]
+[subscription.tags]
 room = "hinten"
 
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/voltage"
 measurement = "poe voltage"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Zyxel 1900 Lounge"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/power"
 measurement = "poe power"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Zyxel 1900 Lounge"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/current"
 measurement = "poe current"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Zyxel 1900 Lounge"
 
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/rx-bytes"
 measurement = "rx rate"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Zyxel 1900 Lounge"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/tx-bytes"
 measurement = "tx rate"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Zyxel 1900 Lounge"
 
 
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/power"
 measurement = "poe"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Nortel 48-Port Darkroom"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/voltage"
 measurement = "voltage"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Nortel 48-Port Darkroom"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/current"
 measurement = "current"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Nortel 48-Port Darkroom"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/rx-bytes"
 measurement = "rx rate"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Nortel 48-Port Darkroom"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/tx-bytes"
 measurement = "tx rate"
-[messages.sensor.tags]
+[subscription.tags]
 device = "Nortel 48-Port Darkroom"
 
 
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/tx-power"
 measurement = "tx-power"
-[messages.sensor.tags]
+[subscription.tags]
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/channel"
 measurement = "ap-channel"
-[messages.sensor.tags]
+[subscription.tags]
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/noise-floor"
 measurement = "ap-noise"
-[messages.sensor.tags]
+[subscription.tags]
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/clients-in-power-save-mode"
 measurement = "ap-powersave"
-[messages.sensor.tags]
+[subscription.tags]
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/clients"
 measurement = "ap-clients"
-[messages.sensor.tags]
+[subscription.tags]
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/rx-bytes"
 measurement = "rx rate"
-[messages.sensor.tags]
+[subscription.tags]
 speed = "sum"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/tx-unicast-bytes"
 measurement = "tx rate"
-[messages.sensor.tags]
+[subscription.tags]
 cast = "uni"
 speed = "sum"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/tx-multicast-bytes"
 measurement = "tx rate"
-[messages.sensor.tags]
+[subscription.tags]
 cast = "multi"
 speed = "sum"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/rx-bytes"
 measurement = "rx rate"
-[messages.sensor.tags]
+[subscription.tags]
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/tx-unicast-bytes"
 measurement = "tx rate"
-[messages.sensor.tags]
+[subscription.tags]
 cast = "uni"
 
-[[messages.sensor]]
+[[subscription]]
 topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/tx-multicast-bytes"
 measurement = "tx rate"
-[messages.sensor.tags]
+[subscription.tags]
 cast = "multi"
 
