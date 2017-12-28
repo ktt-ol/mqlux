@@ -3,7 +3,7 @@ package script
 import (
 	"sync"
 
-	"github.com/ktt-ol/mqlux"
+	"github.com/ktt-ol/mqlux/internal/mqlux"
 	"github.com/pkg/errors"
 	"github.com/robertkrimen/otto"
 )

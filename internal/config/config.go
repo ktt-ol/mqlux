@@ -4,9 +4,7 @@ type Config struct {
 	MQTT     MQTT
 	InfluxDB InfluxDB
 	Messages struct {
-		Devices     Devices
-		SpaceStatus SpaceStatus
-		Sensors     []Sensor `toml:"sensor"`
+		Sensors []Sensor `toml:"sensor"`
 	}
 	CACertFiles []string
 }
@@ -27,21 +25,9 @@ type InfluxDB struct {
 	Database string
 }
 
-type SpaceStatus struct {
-	Topic        string
-	SpaceOpen    string
-	SpaceClosing string
-}
-
-type Devices struct {
-	Topic   string
-	Unknown string
-	Devices string
-	People  string
-}
-
 type Sensor struct {
 	Topic       string
 	Measurement string
 	Tags        map[string]string
+	Script      string
 }

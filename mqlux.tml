@@ -16,16 +16,48 @@ keepalive = "2m"
 #username = "mainframe"
 #password = "*****"
 
-[messages.spaceStatus]
-topic = "/access-control-system/space-state"
-spaceopen = "^(open(ed)?|closing)$"
-spaceclosing = "^closing$"
+# [messages.spaceStatus]
+# topic = "/access-control-system/space-state"
+# spaceopen = "^(open(ed)?|closing)$"
+# spaceclosing = "^closing$"
 
-[messages.devices]
+# [messages.devices]
+# topic = "/net/devices"
+# devices = "deviceCount"
+# unknown = "unknownDevicesCount"
+# people = "peopleCount"
+
+
+[[messages.sensor]]
 topic = "/net/devices"
-devices = "deviceCount"
-unknown = "unknownDevicesCount"
-people = "peopleCount"
+script = """
+function parse(topic, payload) { 
+    var data = JSON.parse(payload);
+    return [
+        {"measurement": "people", "value": data["peopleCount"]},
+        {"measurement": "devices_total", "value": data["deviceCount"]},
+        {"measurement": "devices_unknown", "value": data["unknownDevicesCount"]}
+    ];
+}
+"""
+
+[[messages.sensor]]
+topic = "/access-control-system/space-state"
+measurement = "space_open"
+script = """
+var isOpen = /^open(ed)?$/;
+var isClosing = /^closing$/;
+
+function parse(topic, payload) {
+    var open = 0;
+    if (isOpen.test(payload)) {
+        open = 1;
+    } else if (isClosing.test(payload)) {
+        open = 0.5;
+    }
+    return open;
+}
+"""
 
 ## For float type sensors:
 # [[messages.sensor]]
@@ -38,29 +70,29 @@ people = "peopleCount"
 ## One or more tags (key=value) to distinguish between different sensors.
 # room = "vorne"
 
-# [[messages.sensor]]
-# topic = "/test/stromVorne/cum"
-# measurement = "power"
-# [messages.sensor.tags]
-# room = "vorne"
-#
-# [[messages.sensor]]
-# topic = "/test/stromVorne/power"
-# measurement = "current_power"
-# [messages.sensor.tags]
-# room = "vorne"
-#
-# [[messages.sensor]]
-# topic = "/test/stromHinten/cum"
-# measurement = "power"
-# [messages.sensor.tags]
-# room = "hinten"
-#
-# [[messages.sensor]]
-# topic = "/test/stromHinten/power"
-# measurement = "current_power"
-# [messages.sensor.tags]
-# room = "hinten"
+[[messages.sensor]]
+topic = "/test/stromVorne/cum"
+measurement = "power"
+[messages.sensor.tags]
+room = "vorne"
+
+[[messages.sensor]]
+topic = "/test/stromVorne/power"
+measurement = "current_power"
+[messages.sensor.tags]
+room = "vorne"
+
+[[messages.sensor]]
+topic = "/test/stromHinten/cum"
+measurement = "power"
+[messages.sensor.tags]
+room = "hinten"
+
+[[messages.sensor]]
+topic = "/test/stromHinten/power"
+measurement = "current_power"
+[messages.sensor.tags]
+room = "hinten"
 
 
 [[messages.sensor]]

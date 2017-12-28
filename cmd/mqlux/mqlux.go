@@ -23,6 +23,7 @@ import (
 	"github.com/ktt-ol/mqlux/internal/mqlux"
 	"github.com/ktt-ol/mqlux/internal/mqtt"
 	"github.com/ktt-ol/mqlux/internal/parser"
+	"github.com/ktt-ol/mqlux/internal/parser/script"
 )
 
 func main() {
@@ -54,7 +55,7 @@ func main() {
 			log.Fatal(err)
 		}
 		writer = db.Write
-	} else {
+	} else if *isDebug {
 		writer = func(recs []mqlux.Record) error {
 			var buf bytes.Buffer
 			for _, rec := range recs {
@@ -72,6 +73,8 @@ func main() {
 			}
 			return nil
 		}
+	} else {
+		writer = func(recs []mqlux.Record) error { return nil }
 	}
 
 	handlers := []mqtt.Handler{}
@@ -106,38 +109,23 @@ func main() {
 		handlers = append(handlers, watchdog)
 	}
 
-	if config.Messages.Devices.Topic != "" {
-		handler, err := topic.New(
-			config.Messages.Devices.Topic,
-			"", nil, //set by NetDeviceParser
-			parser.NetDeviceParser(config.Messages.Devices),
-			writer,
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-		handlers = append(handlers, handler)
-	}
-
-	if config.Messages.SpaceStatus.Topic != "" {
-		handler, err := topic.New(
-			config.Messages.SpaceStatus.Topic,
-			"", nil, //set by SpaceStatusParser
-			parser.SpaceStatusParser(config.Messages.SpaceStatus),
-			writer,
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-		handlers = append(handlers, handler)
-	}
-
 	for _, sensor := range config.Messages.Sensors {
+		var p mqtt.Parser
+		if sensor.Script != "" {
+			vm, err := script.New(sensor.Script)
+			if err != nil {
+				log.Fatal(err)
+			}
+			p = vm.Parse
+		} else {
+			p = parser.FloatParser
+		}
+
 		handler, err := topic.New(
 			sensor.Topic,
 			sensor.Measurement,
 			sensor.Tags,
-			parser.FloatParser,
+			p,
 			writer,
 		)
 		if err != nil {

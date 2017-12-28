@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ktt-ol/mqlux"
+	"github.com/ktt-ol/mqlux/internal/mqlux"
 	"github.com/robertkrimen/otto"
 )
 
@@ -110,6 +110,34 @@ func TestTransform(t *testing.T) {
 					Measurement: "temperature",
 					Value:       42.5,
 					Tags:        map[string]string{"script": "test", "sensor": "dht22", "room": "kitchen"},
+				},
+			},
+		},
+		{
+			Name: "parse JSON",
+			JS: `function parse(topic, payload) { 
+				var data = JSON.parse(payload);
+				return [
+					{"value": data["kitchen"], "tags": {"room": "kitchen"}},
+					{"value": data["livingroom"], "tags": {"room": "livingroom"}}
+				];
+			}`,
+			Msg: []mqlux.Message{
+				{Topic: "/sensors/temps",
+					Payload: []byte(`{"kitchen": 19.8, "livingroom": 21.0}`)},
+			},
+			Measurement: "temperature",
+			Tags:        map[string]string{"script": "test"},
+			Want: []mqlux.Record{
+				{
+					Measurement: "temperature",
+					Value:       19.8,
+					Tags:        map[string]string{"script": "test", "room": "kitchen"},
+				},
+				{
+					Measurement: "temperature",
+					Value:       21.0,
+					Tags:        map[string]string{"script": "test", "room": "livingroom"},
 				},
 			},
 		},
