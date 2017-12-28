@@ -79,11 +79,14 @@ func (t *Topic) Tags(topic string) map[string]string {
 		return t.tags
 	}
 	tagNames := t.re.SubexpNames()
+	sub := t.re.FindStringSubmatch(topic)
+	if len(sub) == 0 {
+		return nil
+	}
 	tags := make(map[string]string, len(tagNames)+len(t.tags))
 	for k, v := range t.tags {
 		tags[k] = v
 	}
-	sub := t.re.FindStringSubmatch(topic)
 	for i := 1; i < len(sub); i++ {
 		if sub[i] != "" {
 			tags[tagNames[i]] = sub[i]
