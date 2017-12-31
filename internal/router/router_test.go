@@ -4,28 +4,31 @@ import (
 	"math/rand"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
+
+	"github.com/ktt-ol/mqlux/internal/mqlux"
 )
 
 func TestSortByPath(t *testing.T) {
 	for _, test := range []struct {
-		input []topic
-		want  []topic
+		input []handler
+		want  []handler
 	}{
 		{
-			input: []topic{},
-			want:  []topic{},
+			input: []handler{},
+			want:  []handler{},
 		},
 		{
-			input: []topic{{path: []string{"a", "b", "c"}}},
-			want:  []topic{{path: []string{"a", "b", "c"}}},
+			input: []handler{{path: []string{"a", "b", "c"}}},
+			want:  []handler{{path: []string{"a", "b", "c"}}},
 		},
 		{
-			input: []topic{{path: []string{"c"}}, {path: []string{"b"}}, {path: []string{"a"}}},
-			want:  []topic{{path: []string{"a"}}, {path: []string{"b"}}, {path: []string{"c"}}},
+			input: []handler{{path: []string{"c"}}, {path: []string{"b"}}, {path: []string{"a"}}},
+			want:  []handler{{path: []string{"a"}}, {path: []string{"b"}}, {path: []string{"c"}}},
 		},
 		{
-			input: []topic{
+			input: []handler{
 				{path: []string{"a", "b", "c"}},
 				{path: []string{"a"}},
 				{path: []string{"a", "#"}},
@@ -37,7 +40,7 @@ func TestSortByPath(t *testing.T) {
 				{path: []string{"a", "b", "d"}},
 				{path: []string{"b"}},
 			},
-			want: []topic{
+			want: []handler{
 				{path: []string{"#"}},
 				{path: []string{"a"}},
 				{path: []string{"a", "#"}},
@@ -58,83 +61,97 @@ func TestSortByPath(t *testing.T) {
 	}
 }
 
+type dummyHandler struct {
+	path string
+}
+
+func (h *dummyHandler) Receive(msg mqlux.Message) {
+}
+
+func (h *dummyHandler) Topic() string {
+	return h.path
+}
+
 func TestRouter(t *testing.T) {
 	for _, test := range []struct {
-		input  [][]string
-		search []string
-		want   [][]string
+		input  []string
+		search string
+		want   []int
 	}{
 		{
-			input: [][]string{
-				[]string{"a", "b", "c"},
-				[]string{"a"},
-				[]string{"a", "b"},
-				[]string{"a", "b"},
-				[]string{"a", "b", "c", "d"},
-				[]string{"c"},
-				[]string{"a", "b", "#"},
-				[]string{"a", "b", "d"},
-				[]string{"b"},
+			input: []string{
+				"a/b/c",
+				"a",
+				"a/b",
+				"a/b",
+				"a/b/c/d",
+				"c",
+				"a/b/#",
+				"a/b/d",
+				"b",
 			},
-			search: []string{"a", "b"},
-			want: [][]string{
-				[]string{"a", "b"},
-				[]string{"a", "b"},
-				[]string{"a", "b", "#"},
-			},
-		},
-		{
-			input: [][]string{
-				[]string{"c", "d", "e"},
-				[]string{"c", "d", "e"},
-				[]string{"b"},
-			},
-			search: []string{"c", "d", "e"},
-			want: [][]string{
-				[]string{"c", "d", "e"},
-				[]string{"c", "d", "e"},
+			search: "a/b",
+			want: []int{
+				2, // "a/b"
+				3, // "a/b"
+				6, // "a/b/#"
 			},
 		},
 		{
-			input: [][]string{
-				[]string{"a", "b", "c", "d"},
-				[]string{"c"},
-				[]string{"c", "d", "e"},
-				[]string{"b"},
+			input: []string{
+				"c/d/e",
+				"c/d/e",
+				"b",
 			},
-			search: []string{"c"},
-			want: [][]string{
-				[]string{"c"},
+			search: "c/d/e",
+			want: []int{
+				0, // "c/d/e"
+				1, // "c/d/e"
 			},
 		},
 		{
-			input:  [][]string{[]string{"b"}},
-			search: []string{"a"},
+			input: []string{
+				"a/b/c/d",
+				"c",
+				"c/d/e",
+				"b",
+			},
+			search: "c",
+			want: []int{
+				1, //"c"
+			},
+		},
+		{
+			input:  []string{"b"},
+			search: "a",
 			want:   nil,
 		},
 		{
-			input:  [][]string{[]string{"b"}},
-			search: []string{"c"},
+			input:  []string{"b"},
+			search: "c",
 			want:   nil,
 		},
 		{
-			input: [][]string{
-				[]string{"a", "b", "c", "d"},
-				[]string{"c", "#"},
-				[]string{"c", "d", "e"},
-				[]string{"b"},
-				[]string{"#"},
+			input: []string{
+				"a/b/c/d",
+				"c/#",
+				"c/d/e",
+				"b",
+				"#",
 			},
-			search: []string{"c"},
-			want: [][]string{
-				[]string{"c", "#"},
-				[]string{"#"},
+			search: "c",
+			want: []int{
+				1, // "c/#"
+				4, // "#"
 			},
 		},
 	} {
 		r := New()
-		for _, topic := range test.input {
-			r.Add(topic, topic)
+		hs := []Receiver{}
+		for _, path := range test.input {
+			h := dummyHandler{path: path}
+			r.Add(path, &h)
+			hs = append(hs, &h)
 		}
 		result := r.Find(test.search)
 		if len(result) != len(test.want) {
@@ -142,7 +159,7 @@ func TestRouter(t *testing.T) {
 			continue
 		}
 		for i := range result {
-			if !reflect.DeepEqual(result[i], test.want[i]) {
+			if !reflect.DeepEqual(result[i], hs[test.want[i]]) {
 				t.Errorf("unexpected result[%d] %v != %v", i, result, test.want)
 			}
 		}
@@ -151,7 +168,7 @@ func TestRouter(t *testing.T) {
 
 func BenchmarkRouter(b *testing.B) {
 	r := New()
-	randomPath := func() []string {
+	randomPath := func() string {
 		length := rand.Intn(4) + 2
 		path := make([]string, length)
 		for i := range path {
@@ -160,7 +177,7 @@ func BenchmarkRouter(b *testing.B) {
 		if rand.Intn(10) == 0 {
 			path[length-1] = "#"
 		}
-		return path
+		return strings.Join(path, "/")
 	}
 	for i := 0; i < 100000; i++ {
 		r.Add(randomPath(), nil)

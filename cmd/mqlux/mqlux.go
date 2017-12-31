@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ktt-ol/mqlux/internal/router"
+
 	"github.com/BurntSushi/toml"
 	"github.com/comail/colog"
 	paho "github.com/eclipse/paho.mqtt.golang"
@@ -48,7 +50,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var writer influxdb.Writer
+	var writer mqlux.Writer
 	if config.InfluxDB.URL != "" && *csvFile == "" {
 		db, err := influxdb.NewInfluxDBClient(config)
 		if err != nil {
@@ -77,7 +79,7 @@ func main() {
 		writer = func(recs []mqlux.Record) error { return nil }
 	}
 
-	handlers := []mqtt.Handler{}
+	r := router.New()
 
 	if config.MQTT.CSVLog != "" && *csvFile == "" {
 		var out io.Writer
@@ -96,21 +98,21 @@ func main() {
 			log.Fatal(err)
 		}
 		defer logger.Stop()
-		handlers = append(handlers, logger)
+		r.Add("/#", logger)
 	}
 
-	if config.MQTT.KeepAlive != "" {
+	if config.MQTT.KeepAlive != "" && *csvFile == "" {
 		keepAlive, err := time.ParseDuration(config.MQTT.KeepAlive)
 		if err != nil {
 			log.Fatal("invalid keepalive duration", err)
 		}
 		watchdog := keepalive.NewWatchdogHandler(keepAlive)
 		defer watchdog.Stop()
-		handlers = append(handlers, watchdog)
+		r.Add("/#", watchdog)
 	}
 
 	for _, sub := range config.Subscriptions {
-		var p mqtt.Parser
+		var p mqlux.Parser
 		if sub.Script != "" {
 			vm, err := script.New(sub.Script)
 			if err != nil {
@@ -128,25 +130,26 @@ func main() {
 			p,
 			writer,
 		)
+		handler.IncludeRetained(sub.IncludeRetained)
+
 		if err != nil {
 			log.Fatal(err)
 		}
-		handlers = append(handlers, handler)
+		r.Add(handler.Topic(), handler)
 	}
 
 	if *csvFile != "" {
-		fwd := mqtt.Prepare(handlers)
-		err = debug.MessagesFromCSV(*csvFile, fwd)
+		err = debug.MessagesFromCSV(*csvFile, r.Receive)
 		if err != nil {
 			log.Fatal(err)
 		}
 		return
 	}
 
-	log.Printf("debug: connecting to subscribe for %d handlers", len(handlers))
+	log.Printf("debug: connecting to subscribe")
 	_, err = mqtt.NewMQTTClient(config, func(c paho.Client) {
 		log.Print("debug: on connect")
-		mqtt.Subscribe(c, handlers)
+		mqtt.Subscribe(c, r.Receive)
 	})
 	if err != nil {
 		log.Fatal(err)

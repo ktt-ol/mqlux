@@ -9,8 +9,6 @@ import (
 	"github.com/ktt-ol/mqlux/internal/mqlux"
 )
 
-type Writer func([]mqlux.Record) error
-
 type InfluxDBClient struct {
 	client   *client.Client
 	database string

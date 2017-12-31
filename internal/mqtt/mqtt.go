@@ -4,13 +4,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"log"
-	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ktt-ol/mqlux/internal/config"
 	"github.com/ktt-ol/mqlux/internal/mqlux"
-	"github.com/ktt-ol/mqlux/internal/router"
 )
 
 func defaultCertPool() *x509.CertPool {
@@ -63,53 +61,19 @@ func NewMQTTClient(conf config.Config, onConnect mqtt.OnConnectHandler) (mqtt.Cl
 	return mc, nil
 }
 
-type Handler interface {
-	// Topic returns the topic this handler should be subscribed to.
-	// The topic can contain wildcards. Match will check if
-	// a final topic should actualy be handled.
-	Topic() string
-	// Match returns whether this handler handles a specific topic.
-	Match(topic string) bool
-	// Receive takes and processes an incoming Message.
-	Receive(message mqlux.Message)
-}
-
-type Parser func(msg mqlux.Message, measurement string, tags map[string]string) ([]mqlux.Record, error)
-
-func Prepare(handler []Handler) func(mqlux.Message) {
-	r := router.New()
-	for _, h := range handler {
-		r.Add(strings.Split(h.Topic(), "/"), h)
-	}
-	fwd := func(msg mqlux.Message) {
-		handlers := r.Find(strings.Split(msg.Topic, "/"))
-		// log.Printf("debug: forwarding %s to %d handlers", msg.Topic, len(handlers))
-		for _, h := range handlers {
-			if h, ok := h.(Handler); ok {
-				if h.Match(msg.Topic) {
-					h.Receive(msg)
-				}
-			} else {
-				panic("router returned non-handler type")
-			}
-		}
-	}
-	return fwd
-}
-
-// Subscribe subscribes all handers to the given client.
+// Subscribe subscribes the handler function to /#.
 // Should only be called once for each client.
-func Subscribe(client mqtt.Client, handler []Handler) error {
+func Subscribe(client mqtt.Client, fwd func(mqlux.Message)) error {
 	// mqtt.Client only supports one callback for each topic and
 	// subscribing to a wildcard topic can overwrite callbacks
 	// to specific topics. We use our own router to work around
 	// this limitation.
-	fwd := Prepare(handler)
 	tok := client.Subscribe("/#", 0, func(client mqtt.Client, message mqtt.Message) {
 		msg := mqlux.Message{
-			Time:    time.Now(),
-			Payload: message.Payload(),
-			Topic:   message.Topic(),
+			Time:     time.Now(),
+			Payload:  message.Payload(),
+			Topic:    message.Topic(),
+			Retained: message.Retained(),
 		}
 		fwd(msg)
 	})

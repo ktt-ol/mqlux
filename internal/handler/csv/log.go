@@ -27,14 +27,6 @@ func (w *MQTTLogger) Receive(msg mqlux.Message) {
 	w.records <- msg
 }
 
-func (w *MQTTLogger) Topic() string {
-	return "/#"
-}
-
-func (w *MQTTLogger) Match(topic string) bool {
-	return true
-}
-
 func (w *MQTTLogger) Stop() {
 	close(w.records)
 }

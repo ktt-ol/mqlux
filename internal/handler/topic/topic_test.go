@@ -2,8 +2,6 @@ package topic
 
 import (
 	"reflect"
-	"regexp"
-	"strings"
 	"testing"
 )
 
@@ -40,28 +38,6 @@ func TestMatch(t *testing.T) {
 	}
 }
 
-func Match(topicTemplate, topic string) (map[string]string, error) {
-	if !strings.HasSuffix(topicTemplate, "$") {
-		topicTemplate += "$"
-	}
-	re, err := regexp.Compile(topicTemplate)
-	if err != nil {
-		return nil, err
-	}
-	var tags map[string]string
-	tagNames := re.SubexpNames()
-	sub := re.FindStringSubmatch(topic)
-	for i := 1; i < len(sub); i++ {
-		if sub[i] != "" {
-			if tags == nil {
-				tags = make(map[string]string)
-			}
-			tags[tagNames[i]] = sub[i]
-		}
-	}
-	return tags, nil
-}
-
 func TestNonRegexpTopic(t *testing.T) {
 	for _, test := range []struct {
 		Topic    string
@@ -76,7 +52,7 @@ func TestNonRegexpTopic(t *testing.T) {
 	} {
 		actual, isRegexp := nonRegexpTopic(test.Topic)
 		if test.IsRegexp != isRegexp || actual != test.Want {
-			t.Errorf("topic %s: %s(%s) != %s(%s)", test.Topic, test.Want, test.IsRegexp, actual, isRegexp)
+			t.Errorf("topic %s: %s(%v) != %s(%v)", test.Topic, test.Want, test.IsRegexp, actual, isRegexp)
 		}
 	}
 }

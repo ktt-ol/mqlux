@@ -18,6 +18,7 @@ keepalive = "2m"
 
 [[subscription]]
 topic = "/net/devices"
+include_retained = true
 script = """
 function parse(topic, payload) { 
     var data = JSON.parse(payload);
@@ -51,9 +52,12 @@ function parse(topic, payload) {
 # [[subscription]]
 ## The MQTT topic
 # topic = "/test/stromVorne/cum"
-## The measurement name for influxdb.
+## The measurement name for InfluxDB.
 ## Similar sensors should all share the same `measurement` name.
-## measurement = "power"
+# measurement = "power"
+## Forward retained messages if true (e.g. the last value stored by the MQTT server)
+## Beware that MQTT messages have no timestamp and retained messages are recorded as *now*.
+# include_retained = true
 # [subscription.tags]
 ## One or more tags (key=value) to distinguish between different sensors.
 # room = "vorne"

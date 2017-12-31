@@ -24,8 +24,9 @@ type InfluxDB struct {
 }
 
 type Subscription struct {
-	Topic       string
-	Measurement string
-	Tags        map[string]string
-	Script      string
+	Topic           string
+	Measurement     string
+	Tags            map[string]string
+	Script          string
+	IncludeRetained bool `toml:"include_retained"`
 }

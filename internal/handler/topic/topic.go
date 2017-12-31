@@ -5,21 +5,20 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ktt-ol/mqlux/internal/influxdb"
 	"github.com/ktt-ol/mqlux/internal/mqlux"
-	"github.com/ktt-ol/mqlux/internal/mqtt"
 )
 
 type Topic struct {
-	subscribeTopic string
-	re             *regexp.Regexp
-	measurement    string
-	tags           map[string]string
-	parser         mqtt.Parser
-	writer         influxdb.Writer
+	subscribeTopic  string
+	re              *regexp.Regexp
+	measurement     string
+	tags            map[string]string
+	parser          mqlux.Parser
+	writer          mqlux.Writer
+	includeRetained bool
 }
 
-func New(topic, measurement string, tags map[string]string, parser mqtt.Parser, writer influxdb.Writer) (*Topic, error) {
+func New(topic, measurement string, tags map[string]string, parser mqlux.Parser, writer mqlux.Writer) (*Topic, error) {
 	t := Topic{
 		measurement: measurement,
 		tags:        tags,
@@ -45,11 +44,15 @@ func New(topic, measurement string, tags map[string]string, parser mqtt.Parser, 
 	return &t, nil
 }
 
+func (t *Topic) IncludeRetained(incl bool) {
+	t.includeRetained = incl
+}
+
 func (t *Topic) Topic() string {
 	return t.subscribeTopic
 }
 
-func (t *Topic) Match(topic string) bool {
+func (t *Topic) match(topic string) bool {
 	if t.re == nil {
 		return topic == t.subscribeTopic
 	}
@@ -57,6 +60,13 @@ func (t *Topic) Match(topic string) bool {
 }
 
 func (t *Topic) Receive(msg mqlux.Message) {
+	if !t.match(msg.Topic) {
+		return
+	}
+	if msg.Retained && !t.includeRetained {
+		return
+	}
+
 	tags := t.Tags(msg.Topic)
 	records, err := t.parser(msg, t.measurement, tags)
 	if err != nil {

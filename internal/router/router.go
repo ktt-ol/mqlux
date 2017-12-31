@@ -3,8 +3,16 @@ package router
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
+
+	"github.com/ktt-ol/mqlux/internal/mqlux"
 )
+
+type Receiver interface {
+	// Receive takes and processes an incoming Message.
+	Receive(message mqlux.Message)
+}
 
 // New returns a new Router for fast MQTT topic look ups.
 func New() *Router {
@@ -12,22 +20,24 @@ func New() *Router {
 }
 
 type Router struct {
-	topics []topic
+	topics []handler
 	sorted bool
 	mu     sync.RWMutex
 }
 
-// Add adds a new path to the router and assigns it to a value.
+// Add adds a new path to the router and assigns it to a handler.
 // The path can end with # to match any sub-path.
 // The + wildcard is not supported.
-func (r *Router) Add(path []string, value interface{}) {
+func (r *Router) Add(topic string, h Receiver) {
+	path := strings.Split(topic, "/")
 	r.mu.Lock()
 	r.sorted = false
-	r.topics = append(r.topics, topic{path: path, value: value})
+	r.topics = append(r.topics, handler{path: path, Receiver: h})
 	r.mu.Unlock()
 }
 
-func (r *Router) Find(path []string) []interface{} {
+func (r *Router) Find(topic string) []Receiver {
+	path := strings.Split(topic, "/")
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -53,7 +63,7 @@ func (r *Router) Find(path []string) []interface{} {
 	return result
 }
 
-func (r *Router) find(path []string, result []interface{}) []interface{} {
+func (r *Router) find(path []string, result []Receiver) []Receiver {
 	i := sort.Search(len(r.topics), func(i int) bool {
 		for j, p := range path {
 			if len(r.topics[i].path) < j+1 {
@@ -68,13 +78,21 @@ func (r *Router) find(path []string, result []interface{}) []interface{} {
 	if i >= 0 && i < len(r.topics) {
 		for j := i; j < len(r.topics); j++ {
 			if identical(r.topics[j].path, path) {
-				result = append(result, r.topics[j].value)
+				result = append(result, r.topics[j].Receiver)
 			} else {
 				break
 			}
 		}
 	}
 	return result
+}
+
+func (r *Router) Receive(msg mqlux.Message) {
+	handlers := r.Find(msg.Topic)
+	// log.Printf("debug: forwarding %s to %d handlers", msg.Topic, len(handlers))
+	for _, h := range handlers {
+		h.Receive(msg)
+	}
 }
 
 // hasPrefix checks whether paths starts with prefix
@@ -104,12 +122,12 @@ func identical(a, b []string) bool {
 	return true
 }
 
-type topic struct {
-	path  []string
-	value interface{}
+type handler struct {
+	path []string
+	Receiver
 }
 
-type byPath []topic
+type byPath []handler
 
 func (p byPath) Len() int      { return len(p) }
 func (p byPath) Swap(i, j int) { p[i], p[j] = p[j], p[i] }

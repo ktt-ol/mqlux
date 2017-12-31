@@ -31,14 +31,6 @@ func (w *watchdogHandler) Receive(msg mqlux.Message) {
 	}
 }
 
-func (w *watchdogHandler) Topic() string {
-	return "/#"
-}
-
-func (w *watchdogHandler) Match(topic string) bool {
-	return true
-}
-
 func (w *watchdogHandler) Stop() {
 	w.done <- struct{}{}
 }
