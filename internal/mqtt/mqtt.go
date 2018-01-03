@@ -23,19 +23,19 @@ func defaultCertPool() *x509.CertPool {
 	return certs
 }
 
-func NewMQTTClient(conf config.Config, onConnect mqtt.OnConnectHandler) (mqtt.Client, error) {
+func connect(conf config.MQTT, onConnect mqtt.OnConnectHandler) (mqtt.Client, error) {
 	opts := mqtt.NewClientOptions()
 
-	opts.AddBroker(conf.MQTT.URL)
+	opts.AddBroker(conf.URL)
 
-	if conf.MQTT.Username != "" {
-		opts.SetUsername(conf.MQTT.Username)
+	if conf.Username != "" {
+		opts.SetUsername(conf.Username)
 	}
-	if conf.MQTT.Password != "" {
-		opts.SetPassword(conf.MQTT.Password)
+	if conf.Password != "" {
+		opts.SetPassword(conf.Password)
 	}
 
-	opts.SetClientID(conf.MQTT.ClientID)
+	opts.SetClientID(conf.ClientID)
 
 	certs := defaultCertPool()
 
@@ -61,24 +61,35 @@ func NewMQTTClient(conf config.Config, onConnect mqtt.OnConnectHandler) (mqtt.Cl
 	return mc, nil
 }
 
-// Subscribe subscribes the handler function to /#.
+type Disconnector interface {
+	Disconnect(waitms uint)
+}
+
+// Subscribe connects to the MQTT server and subscribes the handler function to /#.
 // Should only be called once for each client.
-func Subscribe(client mqtt.Client, fwd func(mqlux.Message)) error {
-	// mqtt.Client only supports one callback for each topic and
-	// subscribing to a wildcard topic can overwrite callbacks
-	// to specific topics. We use our own router to work around
-	// this limitation.
-	tok := client.Subscribe("/#", 0, func(client mqtt.Client, message mqtt.Message) {
-		msg := mqlux.Message{
-			Time:     time.Now(),
-			Payload:  message.Payload(),
-			Topic:    message.Topic(),
-			Retained: message.Retained(),
+func Subscribe(config config.MQTT, fwd func(mqlux.Message)) (Disconnector, error) {
+	c, err := connect(config, func(c mqtt.Client) {
+		log.Print("debug: on connect")
+		// mqtt.Client only supports one callback for each topic and
+		// subscribing to a wildcard topic can overwrite callbacks
+		// to specific topics. We use our own router to work around
+		// this limitation.
+		tok := c.Subscribe("/#", 0, func(client mqtt.Client, message mqtt.Message) {
+			msg := mqlux.Message{
+				Time:     time.Now(),
+				Payload:  message.Payload(),
+				Topic:    message.Topic(),
+				Retained: message.Retained(),
+			}
+			fwd(msg)
+		})
+		tok.WaitTimeout(30 * time.Second)
+		if err := tok.Error(); err != nil {
+			log.Print("error: on connect: ", err)
 		}
-		fwd(msg)
 	})
-	tok.WaitTimeout(30 * time.Second)
-	return tok.Error()
+
+	return c, err
 }
 
 var mainframeCert = `

@@ -15,7 +15,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/comail/colog"
-	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ktt-ol/mqlux/internal/config"
 	"github.com/ktt-ol/mqlux/internal/debug"
 	"github.com/ktt-ol/mqlux/internal/handler/csv"
@@ -147,10 +146,7 @@ func main() {
 	}
 
 	log.Printf("debug: connecting to subscribe")
-	_, err = mqtt.NewMQTTClient(config, func(c paho.Client) {
-		log.Print("debug: on connect")
-		mqtt.Subscribe(c, r.Receive)
-	})
+	_, err = mqtt.Subscribe(config.MQTT, r.Receive)
 	if err != nil {
 		log.Fatal(err)
 	}
