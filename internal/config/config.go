@@ -8,12 +8,14 @@ type Config struct {
 }
 
 type MQTT struct {
-	URL       string
-	Username  string
-	Password  string
-	ClientID  string
-	CSVLog    string
-	KeepAlive string
+	URL               string
+	Username          string
+	Password          string
+	ClientID          string
+	CSVLog            string
+	KeepAlive         string
+	TLSServerCert     string `toml:"tls_server_cert"`
+	TLSServerInsecure bool   `toml:"tls_server_insecure"`
 }
 
 type InfluxDB struct {
