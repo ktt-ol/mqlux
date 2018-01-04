@@ -27,6 +27,8 @@ import (
 	"github.com/ktt-ol/mqlux/internal/parser/script"
 )
 
+var version = "master"
+
 func main() {
 	colog.Register()
 	colog.ParseFields(true)
@@ -35,7 +37,14 @@ func main() {
 	configFile := flag.String("config", "mqlux.tml", "configuration")
 	csvFile := flag.String("messages-csv", "", "read messages from CSV file; disables InfluxDB output")
 	isDebug := flag.Bool("debug", false, "print debug messages")
+	printVersion := flag.Bool("version", false, "print version and exit")
+
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Printf("mqlux %s\n", version)
+		os.Exit(0)
+	}
 
 	if *isDebug {
 		colog.SetMinLevel(colog.LDebug)
