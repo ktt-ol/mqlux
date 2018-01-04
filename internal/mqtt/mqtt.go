@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -24,6 +25,10 @@ func connect(conf config.MQTT, onConnect mqtt.OnConnectHandler) (mqtt.Client, er
 		opts.SetPassword(conf.Password)
 	}
 
+	if conf.ClientID == "" {
+		conf.ClientID = fmt.Sprintf("mqlux-%06d\n", time.Now().Nanosecond()/1000)
+	}
+
 	opts.SetClientID(conf.ClientID)
 
 	var certs *x509.CertPool
@@ -42,13 +47,13 @@ func connect(conf config.MQTT, onConnect mqtt.OnConnectHandler) (mqtt.Client, er
 
 	opts.SetAutoReconnect(true)
 
-	opts.SetKeepAlive(10 * time.Second)
+	opts.SetKeepAlive(30 * time.Second)
 	opts.SetMaxReconnectInterval(5 * time.Minute)
 
 	opts.SetOnConnectHandler(onConnect)
 
 	mc := mqtt.NewClient(opts)
-	if tok := mc.Connect(); tok.WaitTimeout(5*time.Second) && tok.Error() != nil {
+	if tok := mc.Connect(); tok.WaitTimeout(10*time.Second) && tok.Error() != nil {
 		return nil, tok.Error()
 	}
 
