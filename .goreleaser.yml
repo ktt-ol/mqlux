@@ -14,3 +14,9 @@ builds:
         goarch: 386
       - goos: windows
         goarch: 386
+archive:
+  wrap_in_directory: true
+  files:
+    - README.md
+    - mqlux.tml
+    - LICENSE
