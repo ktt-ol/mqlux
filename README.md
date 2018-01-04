@@ -9,6 +9,7 @@ Some buzzwords:
 - Powerful regex-based topic matching
 - Support for custom payload parsers (JavaScript)
 
+mqlux is open source and released under the Apache License 2.0.
 
 Configuration
 =============
