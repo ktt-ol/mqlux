@@ -1,9 +1,15 @@
 [mqtt]
-url = "tls://mainframe.io:8883"
-#url = "tcp://test.mosquitto.org:1883"
-# url = "tls://spacegate.mainframe.lan:8883"
-# unique id of this client
-clientid = "mqlux-cbcadc21"
+## URL of the MQTT server.
+## Use tls:// for encrypted and tcp:// for plain connections.
+url = "tcp://test.mosquitto.org:1883"
+# url = "tls://test.mosquitto.org:8883"
+
+## Credentials for MQTT server
+# username = "user"
+# password = "password"
+
+## Unique ID of this client. A random ID is generated if no ID is configured.
+# clientid = "mqlux-0815"
 
 ## Use tls_server_insecure or tls_server_cert, if you use tls
 ## connection and the server uses a self-signed certificate.
@@ -14,232 +20,80 @@ clientid = "mqlux-cbcadc21"
 ## Server certificate as PEM. Query with:
 ##  echo | openssl s_client -servername mainframe.io \
 ##    -connect mainframe.io:8883 2>/dev/null | openssl x509
-tls_server_cert = """
------BEGIN CERTIFICATE-----
-MIICqjCCAZICCQDDcRiB/QxDITANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDDAxt
-YWluZnJhbWUuaW8wHhcNMTUwMjEzMjMyMjQzWhcNMjAwMjEyMjMyMjQzWjAXMRUw
-EwYDVQQDDAxtYWluZnJhbWUuaW8wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
-AoIBAQDEhqyZE2r6QOBPbLSr4FtFWfmaSJggFdZV71+r8unGoAEa7TL1JgSZXBap
-JA8eKzP1O81enQw4utwnE7bmlVlauiMfcgQ8vgPNkG/XjBTlGOGRaqlQy/7ULdgJ
-rdYAujODJsCvFQQ9agocsWMtbH79kFPueSA7Y8oIElTpahp4Slc8VQeX9D90GY2p
-rETIoUNTWT0k9wgNOsdLDdN7XKYKQH2dq7WQyRsnfWUDsf/eKn0rSc6SFgST7/71
-5ek284/zzAxr4rOQcdBnUL+vKM6LPrLs3t34BaIXYht+ttxj6jfJ4DZS1suLSFZY
-wX+zqKCjIVRLrWDNWDGLqJf4js7VAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAJGx
-gPYQRZD23ueJdzuT9xHaVptXpaW3LPHsvfme1uJz731Kl1NuIp5h6oYE5z4c1Gyj
-0+177v2QVy4N2hkH/rTYETQ4wtg9Y5VvP0L5xcF88mH3zjgrZ1RYm3UM8d30mnNm
-GwRDMitAHCim0EPFSXZ2X00v3dhX5+0jjyfRt3azRcINsKXuRbJ3tfECIEi4lv4i
-dXKaevyeaCrZvVoP9LyPcbH4KO8ObVowLnG6c/eQB9QpirC5bt2UDJqWXJKW/yqp
-vmvGbBGwTWhXpvdoWmBj5+qielEyBR4a6TxEr2R/YwEX624TmhlyZcnh3K3Lejdg
-CqTUiKTlyh9bur7Jfn0=
------END CERTIFICATE-----
-"""
+# tls_server_cert = """
+# -----BEGIN CERTIFICATE-----
+# MIICqjCC..........
+# -----END CERTIFICATE-----
+# """
 
-# log all incoming mqtt messages to CSV
-# csvlog = "-"
-#csvlog = /tmp/mainframe-mqtt.log"
-keepalive = "2m"
+## Keepalive enables an optional watchdog. mqlux terminates if it does
+## not receive any message within this duration. 
+# keepalive = "2m"
 
-#[influxdb]
-#url = "http://127.0.0.1:8086"
-#database = "mainframe"
-#username = "mainframe"
-#password = "*****"
+## For testing: Write all incoming MQTT messages as CSV
+# csvlog = "-" # to stdout
+# csvlog = "/tmp/mqtt.log"  # to file
 
-[[subscription]]
-topic = "/net/devices"
-include_retained = true
-script = """
-function parse(topic, payload) { 
-    var data = JSON.parse(payload);
-    return [
-        {"measurement": "people", "value": data["peopleCount"]},
-        {"measurement": "devices_total", "value": data["deviceCount"]},
-        {"measurement": "devices_unknown", "value": data["unknownDevicesCount"]}
-    ];
-}
-"""
 
-[[subscription]]
-topic = "/access-control-system/space-state"
-measurement = "space_open"
-script = """
-var isOpen = /^open(ed)?$/;
-var isClosing = /^closing$/;
+## Configuration for the InfluxDB destination.
+# [influxdb]
+# url = "http://127.0.0.1:8086"
+# database = "database"
+# username = "user"
+# password = password"
 
-function parse(topic, payload) {
-    var open = 0;
-    if (isOpen.test(payload)) {
-        open = 1;
-    } else if (isClosing.test(payload)) {
-        open = 0.5;
-    }
-    return open;
-}
-"""
-
-## For float type sensors:
+## Use subscriptions to configure topics:
 # [[subscription]]
-## The MQTT topic
-# topic = "/test/stromVorne/cum"
+## The MQTT topic:
+# topic = "/sensors/kitchen/temperature"
+## You can use regexp to match multiple topics:
+# topic = "/sensors/[^/]+/temperature"
+## Named capture groups are converted to tags:
+# topic = "/sensors/(?P<location>[^/]+)/temperature"
+#
 ## The measurement name for InfluxDB.
 ## Similar sensors should all share the same `measurement` name.
-# measurement = "power"
+# measurement = "temperature"
+#
 ## Forward retained messages if true (e.g. the last value stored by the MQTT server)
 ## Beware that MQTT messages have no timestamp and retained messages are recorded as *now*.
 # include_retained = true
+#
+## Optional JavaScript parser script to convert MQTT payload to one or more InfluxDB
+## records. See README.md and example below.
+# script = """function parse(topic, payload) { return 42; }"""
+#
 # [subscription.tags]
 ## One or more tags (key=value) to distinguish between different sensors.
-# room = "vorne"
-
-[[subscription]]
-topic = "/test/stromVorne/cum"
-measurement = "power"
-[subscription.tags]
-room = "vorne"
-
-[[subscription]]
-topic = "/test/stromVorne/power"
-measurement = "current_power"
-[subscription.tags]
-room = "vorne"
-
-[[subscription]]
-topic = "/test/stromHinten/cum"
-measurement = "power"
-[subscription.tags]
-room = "hinten"
-
-[[subscription]]
-topic = "/test/stromHinten/power"
-measurement = "current_power"
-[subscription.tags]
-room = "hinten"
+# room = "kitchen"
 
 
-[[subscription]]
-topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/voltage"
-measurement = "poe voltage"
-[subscription.tags]
-device = "Zyxel 1900 Lounge"
+## Example subscription:
+# [[subscription]]
+# topic = "/sensors/kitchen/temperature"
+# measurement = "temperature"
+# [subscription.tags]
+# sensor = "dht22"
+# location = "kitchen"
 
-[[subscription]]
-topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/power"
-measurement = "poe power"
-[subscription.tags]
-device = "Zyxel 1900 Lounge"
+## Similar subscription, but location tag is set from topic:
+# [[subscription]]
+# topic = "/sensors/(?P<location>[^/]+)/temperature"
+# measurement = "temperature"
+# [subscription.tags]
+# sensor = "dht22"
 
-[[subscription]]
-topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/current"
-measurement = "poe current"
-[subscription.tags]
-device = "Zyxel 1900 Lounge"
-
-
-[[subscription]]
-topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/rx-bytes"
-measurement = "rx rate"
-[subscription.tags]
-device = "Zyxel 1900 Lounge"
-
-[[subscription]]
-topic = "/net/zyxel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/tx-bytes"
-measurement = "tx rate"
-[subscription.tags]
-device = "Zyxel 1900 Lounge"
-
-
-
-[[subscription]]
-topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/power"
-measurement = "poe"
-[subscription.tags]
-device = "Nortel 48-Port Darkroom"
-
-[[subscription]]
-topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/voltage"
-measurement = "voltage"
-[subscription.tags]
-device = "Nortel 48-Port Darkroom"
-
-[[subscription]]
-topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/poe/current"
-measurement = "current"
-[subscription.tags]
-device = "Nortel 48-Port Darkroom"
-
-[[subscription]]
-topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/rx-bytes"
-measurement = "rx rate"
-[subscription.tags]
-device = "Nortel 48-Port Darkroom"
-
-[[subscription]]
-topic = "/net/nortel-switch/port-(?:0(?P<port>\\d)|(?P<port>\\d+))/stats/tx-bytes"
-measurement = "tx rate"
-[subscription.tags]
-device = "Nortel 48-Port Darkroom"
-
-
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/tx-power"
-measurement = "tx-power"
-[subscription.tags]
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/channel"
-measurement = "ap-channel"
-[subscription.tags]
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/noise-floor"
-measurement = "ap-noise"
-[subscription.tags]
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/clients-in-power-save-mode"
-measurement = "ap-powersave"
-[subscription.tags]
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/clients"
-measurement = "ap-clients"
-[subscription.tags]
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/rx-bytes"
-measurement = "rx rate"
-[subscription.tags]
-speed = "sum"
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/tx-unicast-bytes"
-measurement = "tx rate"
-[subscription.tags]
-cast = "uni"
-speed = "sum"
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-sum/tx-multicast-bytes"
-measurement = "tx rate"
-[subscription.tags]
-cast = "multi"
-speed = "sum"
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/rx-bytes"
-measurement = "rx rate"
-[subscription.tags]
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/tx-unicast-bytes"
-measurement = "tx rate"
-[subscription.tags]
-cast = "uni"
-
-[[subscription]]
-topic = "/net/wlan/ap-(?:0(?P<ap>\\d)|(?P<ap>\\d+))/radio-(?P<radio>\\d+)/stats-(?P<speed>\\d+.\\d+)/tx-multicast-bytes"
-measurement = "tx rate"
-[subscription.tags]
-cast = "multi"
-
+## Example subscription with custom JavaScript parser that parses JSON
+## and returns multiple independent records:
+# [[subscription]]
+# topic = "/net/devices"
+# script = """
+# function parse(topic, payload) { 
+#     var data = JSON.parse(payload);
+#     return [
+#         {"measurement": "people", "value": data["peopleCount"]},
+#         {"measurement": "devices_total", "value": data["deviceCount"]},
+#         {"measurement": "devices_unknown", "value": data["unknownDevicesCount"]}
+#     ];
+# }
+# """
