@@ -20,3 +20,6 @@ archive:
     - README.md
     - mqlux.tml
     - LICENSE
+  format_overrides:
+    - goos: windows
+      format: zip
