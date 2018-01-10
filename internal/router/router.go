@@ -71,6 +71,8 @@ func (r *Router) find(path []string, result []Receiver) []Receiver {
 			}
 			if r.topics[i].path[j] < p {
 				return false
+			} else if r.topics[i].path[j] > p {
+				return true
 			}
 		}
 		return true

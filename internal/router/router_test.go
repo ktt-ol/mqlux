@@ -145,6 +145,20 @@ func TestRouter(t *testing.T) {
 				4, // "#"
 			},
 		},
+		{
+			input: []string{
+				"/a/#",
+				"/a/a/x",
+				"/a/x",
+				"/b/a/x",
+				"/b/x",
+			},
+			search: "/a/a/x",
+			want: []int{
+				1, // "/a/a/x"
+				0, // "/a/#"
+			},
+		},
 	} {
 		r := New()
 		hs := []Receiver{}
