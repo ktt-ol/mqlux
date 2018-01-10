@@ -94,21 +94,21 @@ func devicesPoints(d Devices) []client.Point {
 		{
 			Measurement: "devices_total",
 			Fields: map[string]interface{}{
-				"value": d.Devices,
+				"value": float64(d.Devices),
 			},
 			Time: now,
 		},
 		{
 			Measurement: "devices_unknown",
 			Fields: map[string]interface{}{
-				"value": d.Unknown,
+				"value": float64(d.Unknown),
 			},
 			Time: now,
 		},
 		{
 			Measurement: "people",
 			Fields: map[string]interface{}{
-				"value": d.People,
+				"value": float64(d.People),
 			},
 			Time: now,
 		},
