@@ -65,7 +65,13 @@ func main() {
 			log.Fatal(err)
 		}
 		writer = db.Write
-	} else if *isDebug {
+	} else {
+		writer = func(recs []mqlux.Record) error { return nil }
+	}
+
+	if *isDebug {
+		// wrap original writer with debug logger
+		origWriter := writer
 		writer = func(recs []mqlux.Record) error {
 			var buf bytes.Buffer
 			for _, rec := range recs {
@@ -81,10 +87,8 @@ func main() {
 				}
 				log.Println(buf.String())
 			}
-			return nil
+			return origWriter(recs)
 		}
-	} else {
-		writer = func(recs []mqlux.Record) error { return nil }
 	}
 
 	r := router.New()
