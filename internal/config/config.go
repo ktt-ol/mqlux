@@ -19,10 +19,11 @@ type MQTT struct {
 }
 
 type InfluxDB struct {
-	URL      string
-	Username string
-	Password string
-	Database string
+	URL             string
+	Username        string
+	Password        string
+	Database        string
+	RetentionPolicy string `toml:"retention_policy"`
 }
 
 type Subscription struct {

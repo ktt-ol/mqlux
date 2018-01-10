@@ -10,8 +10,9 @@ import (
 )
 
 type InfluxDBClient struct {
-	client   *client.Client
-	database string
+	client          *client.Client
+	database        string
+	retentionPolicy string
 }
 
 func NewInfluxDBClient(conf config.Config) (*InfluxDBClient, error) {
@@ -30,8 +31,9 @@ func NewInfluxDBClient(conf config.Config) (*InfluxDBClient, error) {
 	}
 
 	return &InfluxDBClient{
-		client:   c,
-		database: conf.InfluxDB.Database,
+		client:          c,
+		database:        conf.InfluxDB.Database,
+		retentionPolicy: conf.InfluxDB.RetentionPolicy,
 	}, nil
 }
 
@@ -54,7 +56,7 @@ func (i *InfluxDBClient) writePoints(pts []client.Point) error {
 	bps := client.BatchPoints{
 		Points:          pts,
 		Database:        i.database,
-		RetentionPolicy: "default",
+		RetentionPolicy: i.retentionPolicy,
 	}
 
 	_, err := i.client.Write(bps)

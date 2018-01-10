@@ -41,6 +41,9 @@ url = "tcp://test.mosquitto.org:1883"
 # database = "database"
 # username = "user"
 # password = password"
+## Optional retention policy name. mqlux uses the default
+## policy if not set or empty. 
+# retention_policy = "month"
 
 ## Use subscriptions to configure topics:
 # [[subscription]]
